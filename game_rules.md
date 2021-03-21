@@ -143,9 +143,9 @@ If the cost for movement is 0:n, than any number of units may move freely to the
 
 #### Calculating Costs
 
-```
-NB: this is here for explanation purposes only. The actual calculation within the game app will be handled by the game engine. Additionally, some ideas are underway to create a simple circuit based method for any physical copies of this game. in the prototype of the game, this is tracked through use of a tracker that lied on all of the edges of the adjacent cells and was somewhat cumbersome, but workable.
-```
+
+_NB: this is here for explanation purposes only. The actual calculation within the game app will be handled by the game engine. Additionally, some ideas are underway to create a simple circuit based method for any physical copies of this game. in the prototype of the game, this is tracked through use of a tracker that lied on all of the edges of the adjacent cells and was somewhat cumbersome, but workable._
+
 
 The costs associated with adjacent moves between cells the are calculated by comparing across the shared edge between the cells the individual nodes of each of the shells in a reflective manner. Using this method, each node of the shell Cell A is paired up with a node of Cell B and a Hamming distance _H_ is calculated on vacancies vs. occupancies. That is: one by one the pairs of nodes are compared on similarity (whether occupied or not) and all the dissimilar pairs are counted. This, combined with the inverse Hamming distance _~H_ (Hamming distance - total shell size, or the number of similarities between pairs) is used to make a fraction of _H:~H_ which is then reduced by the greatest common denominator (i.e. a value _2:4_ is reduced to _1:2_). Thus:
 

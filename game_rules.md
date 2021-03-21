@@ -114,7 +114,7 @@ The active phase continues up until every player has consecutively either had a 
 
 ## Harvest Phase
 
- Each player shall be rewarded a number of points for their tally based on the number of active beacons held for themselves.
+ Each player shall be rewarded a number of points for their tally based on the number of active beacons they hold.
 
  During this phase, every cell is evaluated and each player is rewarded units based on the following rules:
 
@@ -123,23 +123,22 @@ The active phase continues up until every player has consecutively either had a 
   2. Additionally, if the player is dominant in that cell, that player receives one (1) unit per each adjacency which the player occupies, if and up until the maximum limit of that store has been achieved.
 
 
- At this point, the coffer totals will be tallied once again. The orders for the next round shall be determined from least to highest, with ties won by who was first from a prior round.
+ At this point, the coffer totals will be counted. The order for the next round shall be determined from least to highest, with ties won by one who was first from the prior round.
 
- Any units from a players' coffer may be transferred to any cell store which one occupies already, up to the store limit.
+ Any units from a player's coffer may be transferred to any cell store which one occupies already, up to the store limit.
 
  Any remaining units are discarded from the coffers. If a player failed to move any units onto the board during this phase, they are considered inactive and must remove the remaining pieces from any cell store.
 
- If a player has been made inactive at this point, the setup may allow for a buy in at this juncture, where a player is given n units to place in any cell store as they see fit, up to the limit of a cell store and regardless if the cell store is already occupied.
-
+ If a player has been made inactive at this point, the setup may allow for a buy-in at this juncture, where a player is given _n_ units to place in any cell store as they see fit, up to the limit of a cell store and regardless if the cell store is already occupied.
  
 
 ## Active Phase Moves
 
 ### 1. Transfer Units Between Cells
 
-The player may be able to move between adjacent cells at a possible cost. This cost/move, marked in the notation _p:m_, (where _p_ is the amount of units to pay and _m_ is the limit of the units that can be moved) is dependant and calculated for a given adjacency through the comparison of the cell shells (to be discussed later). The cost _p_ must be paid in full from the player's units within the store of the cell which one wishes to move from before any the units are moved, up to the amount _m_ (ex: a player wishes to move from cell A to cell B with a given cost of 2:5. This means that a player must pay two units before moving __up to 5__ units. If the player currently has 5 units in Cell A's store, and wants to move as many to Cell B as possible, the player would pay the cost of 2 from the store first before moving the remaining 3.) 
+The player may be able to move between adjacent cells at a possible cost. This cost/move, marked in the notation _p:m_, (where _p_ is the amount of units to pay and _m_ is the limit of the units that can be moved) is dependant and calculated for a given adjacency through the comparison of the cell shells (to be discussed later). The cost _p_ must be paid in full from the player's units within the store of the cell which one wishes to move from before any the units are moved, up to the amount _m_ (e.g.: a player wishes to move from cell A to cell B with a given cost of 2:5. This means that a player must pay two units before moving __up to 5__ units. If the player currently has 5 units in Cell A's store, and wants to move as many to Cell B as possible, the player would pay the cost of 2 from the store first before moving the remaining 3.) 
 
-If the cost for movement is 0:n, than any number of units may move freely to the adjacent cell. _This is considered a cost free move._ If the cost is n:0, than movement is blocked between one cell and the other, and no units may move at any cost.
+If the cost for movement is _0:n_, than any number of units may move freely to the adjacent cell. _This is considered a cost free move._ If the cost is _n:0_, than movement is blocked between one cell and the other, and no units may move at any cost.
 
 #### Calculating Costs
 
@@ -147,11 +146,10 @@ If the cost for movement is 0:n, than any number of units may move freely to the
 _NB: this is here for explanation purposes only. The actual calculation within the game app will be handled by the game engine. Additionally, some ideas are underway to create a simple circuit based method for any physical copies of this game. in the prototype of the game, this is tracked through use of a tracker that lied on all of the edges of the adjacent cells and was somewhat cumbersome, but workable._
 
 
-The costs associated with adjacent moves between cells the are calculated by comparing across the shared edge between the cells the individual nodes of each of the shells in a reflective manner. Using this method, each node of the shell Cell A is paired up with a node of Cell B and a Hamming distance _H_ is calculated on vacancies vs. occupancies. That is: one by one the pairs of nodes are compared on similarity (whether occupied or not) and all the dissimilar pairs are counted. This, combined with the inverse Hamming distance _~H_ (Hamming distance - total shell size, or the number of similarities between pairs) is used to make a fraction of _H:~H_ which is then reduced by the greatest common denominator (i.e. a value _2:4_ is reduced to _1:2_). Thus:
+The costs associated with adjacent moves between cells are calculated by comparing the individual nodes of each of the shells across the shared edge between the cells in a reflective manner. Using this method, each node of the shell of Cell A is paired up with a node of shell of Cell B and a Hamming distance _H_ is calculated on vacancies vs. occupancies. That is: one by one the pairs of nodes are compared on similarity (whether occupied or not) and all the dissimilar pairs are counted. This, combined with the inverse Hamming distance _~H_ (Hamming distance - total shell size, or the number of similarities between pairs) is used to make a fraction of _H:~H_ which is then reduced by the greatest common denominator (i.e. a value _2:4_ is reduced to _1:2_). Thus:
 
 ```
-
-H  = hamming(index_for_A_on_B >> shellA, index_for_B_on_A >> shellB) where >> is a circular shift
+H  = hamming(index_for_A_on_B >> shellA, index_for_B_on_A >> shellB) where >> is a circular shift.
 ~H = Total - H
 p  = H / gcd(H, ~H)
 m  = ~H / gcd(H, ~H)
@@ -163,7 +161,7 @@ p:m
 
 ### 2. Destroy Units
 
-This action occurs locally to a store in question. A player may destroy one unit belonging to another player in the same store as a player's own units at a cost of one of their units in the store, or one for one. (Ex: player a has 5 of their units in a store with 3 units of another player's units. Player A removes a unit one for one twice from Player B's units, leaving 2 units for Player A and 1 unit for Player B)
+This action occurs locally to a store in question. Provided that the active player is occupying the same cell as another player, that active player may spend one unit of their store to destroy and discard one of other player's units; i.e., one-for-one. (Ex: Player A has 5 of their units in a store with 3 of another Player units. Player A removes a unit one-for-one two times from Player B's units, leaving 2 units for Player A and 1 unit for Player B)
 
 ### 3. Shift Shell
 
@@ -171,7 +169,7 @@ At a cost of one unit from the cell store in question (or more, depending on the
 
 ### 4. Modify a Shell
 
-If a beacon occupied by an active player is adjacent to a cell, this cell may perform this action. For the cost of 1 unit from the corresponding cell store (or some value greater determined by the game setup) a player may either:
+If a beacon occupied by the active player is adjacent to a cell, this cell may perform this action. For the cost of 1 unit from the corresponding cell store (or some value greater determined by the game setup), a player may either:
 
  1. Remove and discard a unit from any occupied node in the cell shell, or
  2. Add a unit to the cell shell.
@@ -182,9 +180,9 @@ A player may place one of their units in the position of a beacon if and only if
 
 ### 6. Pay Into Another Player's Coffer
 
-A player may place into any _other_ player's coffer from any store cell any amount of units. This shall be considered an at-cost move.
+A player may place into any _other_ player's coffer from any cell's store any amount of units. This shall be considered an at-cost move.
 
 # End of Game
 
-The game continues through as many rounds as decided. Once the final harvest has taken place, the winner is the player who has the highest tally/score. Ties may be determined by who has the highest amount of dominant cells.
+The game continues through as many rounds as decided. Once the final harvest has taken place, the winner is the player who has the highest tally/score. Ties may be determined by the player who has the highest amount of dominant cells.
 

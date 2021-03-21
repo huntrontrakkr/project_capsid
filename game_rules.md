@@ -114,7 +114,7 @@ The active phase continues up until every player has consecutively either had a 
 
 ## Harvest Phase
 
- Each player shall be rewarded a number of points for their tally based on the number of active beacons held for themselfs.
+ Each player shall be rewarded a number of points for their tally based on the number of active beacons held for themselves.
 
  During this phase, every cell is evaluated and each player is rewarded units based on the following rules:
 

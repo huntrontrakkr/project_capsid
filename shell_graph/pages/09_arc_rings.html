@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Necklace rings on arcs</title><link rel="stylesheet" href="style.css">
+<style>
+.v{cursor:pointer}
+.v circle.b{fill:var(--surface-1);stroke:var(--text-secondary);stroke-width:.75}
+.v.n circle.b{stroke:#D85A30;stroke-width:2}
+.v.s circle.b{stroke:var(--text-accent);stroke-width:2.75}
+.mono{font-family:var(--font-mono);color:var(--text-primary);letter-spacing:1px}
+</style></head><body><main>
+<h1>Necklace rings on arcs</h1>
+<p class="note">Each state drawn as its shell pattern. Each necklace is ordered by rotation along its arc, so neighbors are one click apart, and the dashed arrows leaving both ends are the same wrap-around step. The three-in-a-row ring encircles the alternating pair.</p>
+<div style="display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;font-size:13px;color:var(--text-secondary);margin:0 0 4px">
+<span style="display:flex;align-items:center;gap:6px"><svg width="22" height="8" aria-hidden="true"><line x1="0" y1="4" x2="22" y2="4" stroke="#1D9E75" stroke-width="2"/></svg>Rotate one step</span>
+<span style="display:flex;align-items:center;gap:6px"><svg width="22" height="8" aria-hidden="true"><line x1="0" y1="4" x2="22" y2="4" stroke="var(--text-muted)" stroke-width="1"/></svg>Add or remove one unit</span>
+</div>
+<svg id="g" width="100%" viewBox="0 0 380 572" role="img"><title>Necklace rings</title><desc>Shell states as ring patterns on nested arcs, rotation rings wrapping off the edges</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs></svg>
+<div id="out" style="font-size:13px;color:var(--text-secondary);line-height:1.7;margin-top:2px;min-height:46px"></div>
+<nav><a href="index.html">All graphs</a></nav>
+<script src="ring_view.js"></script>
+<script>
+const KK=[14.51,15.797,14.416,11.556,8.665,5.781,2.89,0,-2.89,-5.781,-8.665,-11.556,-14.416,-15.797,-14.51];
+ringView({Q:[[190.0,34.0],[212.78,70.82],[252.23,76.12],[275.0,116.42],[275.0,81.41],[232.11,179.54],[337.23,137.25],[306.11,318.1],[105.0,81.41],[127.77,146.47],[210.11,178.35],[201.39,214.07],[42.77,137.25],[85.27,351.66],[190.0,322.0],[201.0,465.83],[127.77,76.12],[82.22,188.07],[190.0,142.0],[243.89,356.32],[169.89,178.35],[144.45,286.0],[178.61,214.07],[232.11,392.46],[105.0,116.42],[85.27,220.34],[136.11,356.32],[127.77,425.53],[73.89,318.1],[82.22,383.93],[179.0,465.83],[212.78,501.18],[167.22,70.82],[201.0,106.17],[297.78,188.07],[306.11,253.9],[252.23,146.47],[243.89,215.68],[294.73,351.66],[275.0,455.58],[147.89,179.54],[201.39,357.93],[235.55,286.0],[210.11,393.65],[136.11,215.68],[190.0,430.0],[297.78,383.93],[252.23,495.88],[179.0,106.17],[190.0,250.0],[294.73,220.34],[337.23,434.75],[178.61,357.93],[169.89,393.65],[252.23,425.53],[275.0,490.59],[73.89,253.9],[42.77,434.75],[147.89,392.46],[105.0,490.59],[105.0,455.58],[127.77,495.88],[167.22,501.18],[190.0,538.0]],ST:[[0],[8,16,32,1,2,4],[12,24,48,33,3,6],[9,18,36],[17,40,20,10,5,34],[25,44,22,11,37,50],[56,49,35],[21,42],[28,14,7],[13,26,52,41,19,38],[29,58,53,43,23,46],[27,45,54],[57,60,30,15,39,51],[59,61,62,31,47,55],[63]],yk:(k,x)=>34+36*k+KK[k]*1e-4*(x-190)**2,stubL:8,stubR:372,bulge:44,greenBulge:34});
+</script>
+</main></body></html>

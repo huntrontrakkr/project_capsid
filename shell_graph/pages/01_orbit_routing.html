@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shell state graph</title><link rel="stylesheet" href="style.css">
+<style>
+.nd{cursor:pointer}
+.nd circle.b{fill:var(--surface-1);stroke:var(--border-strong);stroke-width:.75}
+.nd.n circle.b{stroke:var(--text-accent);stroke-width:1.5}
+.nd.p circle.b{stroke:#D85A30;stroke-width:1.75}
+.nd.s circle.b{stroke:var(--text-accent);stroke-width:2.5}
+.nd.t circle.b{stroke:#D85A30;stroke-width:2.5}
+.mono{font-family:var(--font-mono);color:var(--text-primary);letter-spacing:1px}
+</style></head><body><main>
+<h1>Shell state graph: necklaces as polygons</h1>
+<p class="note">All 64 states of a six-node shell in rows by fill level. Teal polygons are rotation orbits (necklaces); gray edges add or remove one unit. Tap a start state, then a target, for the cheapest route.</p>
+<div style="display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;font-size:13px;color:var(--text-secondary);margin:0 0 8px">
+<span style="display:flex;align-items:center;gap:6px"><svg width="22" height="8" aria-hidden="true"><line x1="0" y1="4" x2="22" y2="4" stroke="#1D9E75" stroke-width="2"/></svg>Shift (rotate one step)</span>
+<span style="display:flex;align-items:center;gap:6px"><svg width="22" height="8" aria-hidden="true"><line x1="0" y1="4" x2="22" y2="4" stroke="var(--text-muted)" stroke-width="1"/></svg>Add or remove one unit</span>
+</div>
+<div style="display:flex;gap:12px;align-items:center;margin:0 0 4px;font-size:13px">
+<label style="display:flex;gap:6px;align-items:center;color:var(--text-secondary)"><input type="checkbox" id="dom" checked> Dominant (free shifts)</label>
+<button id="rst">Reset</button>
+</div>
+<svg id="g" width="100%" viewBox="0 0 380 670" role="img"><title>Shell state graph</title><desc>64 shell states in rows by number of occupied nodes</desc></svg>
+<div id="out" style="font-size:13px;color:var(--text-secondary);line-height:1.7;margin-top:4px;min-height:60px"></div>
+<nav><a href="index.html">All graphs</a></nav>
+<script>
+const $=id=>document.getElementById(id);
+const rot=(s,k)=>{k=((k%6)+6)%6;return k?((s<<k)|(s>>(6-k)))&63:s};
+const pc=s=>{let c=0;while(s){c+=s&1;s>>=1}return c};
+const canon=s=>{let m=s;for(let k=1;k<6;k++)m=Math.min(m,rot(s,k));return m};
+const reps=[...new Set(Array.from({length:64},(_,s)=>canon(s)))];
+const orbits=reps.map(r=>{const m=[r];let t=rot(r,1);while(t!==r){m.push(t);t=rot(t,1)}return m});
+const ys=[34,128,232,336,440,544,638],P={};
+const wd=o=>o.length===6?70:o.length===3?52:20;
+for(let w=0;w<=6;w++){
+ const os=orbits.filter(o=>pc(o[0])===w).sort((a,b)=>b.length-a.length||a[0]-b[0]);
+ const G=24,tot=os.reduce((t,o)=>t+wd(o),0)+G*(os.length-1);let x=(380-tot)/2;
+ os.forEach(o=>{const cx=x+wd(o)/2,cy=ys[w];
+  o.forEach((s,k)=>{let px=cx,py=cy;
+   if(o.length===6){const a=(-90+k*60)*Math.PI/180;px=cx+28*Math.cos(a);py=cy+28*Math.sin(a)}
+   else if(o.length===3){const a=(-90+k*120)*Math.PI/180;px=cx+18*Math.cos(a);py=cy+18*Math.sin(a)}
+   else if(o.length===2){py=cy+(k?14:-14)}
+   P[s]=[px,py]});
+  x+=wd(o)+G});
+}
+const seg=(a,b,at)=>{const[x1,y1]=P[a],[x2,y2]=P[b],dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy),o=11/L;
+ return `<line x1="${(x1+dx*o).toFixed(1)}" y1="${(y1+dy*o).toFixed(1)}" x2="${(x2-dx*o).toFixed(1)}" y2="${(y2-dy*o).toFixed(1)}" ${at}/>`};
+let mod='',rt='',nd='';
+for(let s=0;s<64;s++)for(let i=0;i<6;i++){const t=s^(1<<i);if(s<t)mod+=seg(s,t,'')}
+orbits.forEach(o=>{if(o.length<2)return;const n=o.length===2?1:o.length;for(let k=0;k<n;k++)rt+=seg(o[k],o[(k+1)%o.length],'')});
+for(let s=0;s<64;s++){const[x,y]=P[s];let d='';
+ for(let i=0;i<6;i++){const a=(-90+i*60)*Math.PI/180,dx=x+6*Math.cos(a),dy=y+6*Math.sin(a);
+  d+=(s>>i)&1?`<circle cx="${dx.toFixed(1)}" cy="${dy.toFixed(1)}" r="1.9" fill="var(--text-primary)"/>`:`<circle cx="${dx.toFixed(1)}" cy="${dy.toFixed(1)}" r="1.6" fill="none" stroke="var(--text-muted)" stroke-width=".8"/>`}
+ nd+=`<g class="nd" data-s="${s}"><circle class="b" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="10"/>${d}</g>`}
+const svg=$('g');
+svg.insertAdjacentHTML('beforeend',`<g stroke="var(--text-muted)" stroke-opacity=".35" stroke-width=".6">${mod}</g><g stroke="#1D9E75" stroke-width="2" stroke-linecap="round">${rt}</g><g id="pl" stroke="#D85A30" stroke-width="3" stroke-linecap="round"></g>${nd}`);
+const pat=s=>Array.from({length:6},(_,i)=>(s>>i)&1?'●':'○').join('');
+let S=3,T=21;
+function clear(){svg.querySelectorAll('.nd').forEach(e=>e.classList.remove('s','t','p','n'));$('pl').innerHTML=''}
+const node=s=>svg.querySelector(`.nd[data-s="${s}"]`);
+function showStart(){clear();node(S).classList.add('s');
+ for(let i=0;i<6;i++)node(S^(1<<i)).classList.add('n');
+ for(let k=1;k<6;k++){const v=rot(S,k);if(v!==S)node(v).classList.add('n')}
+ $('out').innerHTML=`<div><span class="mono">${pat(S)}</span> start</div><div>Tap a target state. Its one-move neighbors are outlined.</div>`}
+function route(){clear();const dom=$('dom').checked;
+ const D=Array(64).fill(1e9),pv=Array(64).fill(-1),mv=Array(64).fill(null),dn=Array(64).fill(false);D[S]=0;
+ for(;;){let u=-1;for(let i=0;i<64;i++)if(!dn[i]&&(u<0||D[i]<D[u]))u=i;if(u<0||D[u]>=1e9||u===T)break;dn[u]=true;
+  for(let i=0;i<6;i++){const v=u^(1<<i),c=D[u]+101;if(c<D[v]){D[v]=c;pv[v]=u;mv[v]=['f',i,u]}}
+  for(let k=1;k<6;k++){const v=rot(u,k);if(v===u)continue;const c=D[u]+(dom?1:101);if(c<D[v]){D[v]=c;pv[v]=u;mv[v]=['r',k,u]}}}
+ const path=[];for(let v=T;v!==S;v=pv[v])path.unshift(v);
+ let lines='',rows=`<div><span class="mono">${pat(S)}</span> start</div>`;
+ path.forEach(v=>{const[ty,a,u]=mv[v];lines+=seg(u,v,'');node(v).classList.add('p');
+  let txt;if(ty==='r'){txt=(a<=3?`Shift ${a} clockwise`:`Shift ${6-a} counterclockwise`)+(dom?' · free':' · 1 unit')}
+  else txt=((u>>a)&1?'Remove':'Add')+` at node ${a+1} · 1 unit`;
+  rows+=`<div><span class="mono">${pat(v)}</span> ${txt}</div>`});
+ $('pl').innerHTML=lines;node(S).classList.add('s');node(T).classList.add('t');
+ const units=Math.floor(D[T]/100),moves=D[T]%100;
+ $('out').innerHTML=`<div style="color:var(--text-primary);font-weight:500">${moves} move${moves===1?'':'s'} · ${units} unit${units===1?'':'s'}</div>`+rows}
+svg.addEventListener('click',e=>{const g=e.target.closest('.nd');if(!g)return;const s=+g.dataset.s;
+ if(S===null||T!==null){S=s;T=null;showStart()}else if(s===S){S=null;clear();$('out').innerHTML='<div>Tap a start state.</div>'}else{T=s;route()}});
+$('dom').addEventListener('change',()=>{if(S!==null&&T!==null)route()});
+$('rst').addEventListener('click',()=>{S=null;T=null;clear();$('out').innerHTML='<div>Tap a start state.</div>'});
+route();
+</script>
+</main></body></html>

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Necklace rows</title><link rel="stylesheet" href="style.css">
+<style>
+.v{cursor:pointer}
+.mono{font-family:var(--font-mono);color:var(--text-primary);letter-spacing:1px}
+.lg{display:flex;align-items:center;gap:8px;cursor:pointer;padding:3px 6px;border-radius:var(--radius);border:.5px solid transparent}
+.lg.on{background:var(--surface-1);border-color:var(--border-strong)}
+button[aria-pressed="true"]{border-color:var(--border-accent);color:var(--text-accent);background:var(--bg-accent)}
+</style></head><body><main>
+<h1>Necklaces grouped into rows</h1>
+<p class="note">Each necklace is one contiguous block in rotation order, with the 2-filled and 4-filled blocks stacked so every state sits above its open/filled flip. Block order, starting rotation and direction were searched for fewest crossings (1,516, against 906 for the plain layered rows).</p>
+<div style="display:flex;gap:8px;align-items:center;margin:0 0 6px;flex-wrap:wrap">
+<button id="bC" aria-pressed="false">Columns</button>
+<button id="bL" aria-pressed="true">Layered</button>
+<button id="bP" aria-pressed="false">12-gon</button>
+</div>
+<div id="cap" style="font-size:13px;color:var(--text-secondary);margin:0 0 2px">Top: all open · bottom: all filled</div>
+<svg id="g" width="100%" viewBox="0 0 380 500" role="img"><title>Necklaces grouped into rows</title><desc>64 shell states grouped by rotation class, each class in rotation order</desc></svg>
+<div id="out" style="font-size:13px;color:var(--text-secondary);line-height:1.7;margin:2px 0 8px;min-height:46px">Tap a node or a necklace to highlight its class.</div>
+<div id="leg" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 10px;font-size:13px;color:var(--text-secondary)"></div>
+<nav><a href="index.html">All graphs</a></nav>
+<script src="necklace_views.js"></script>
+<script>necklaceViews({views:['C','L','P'],start:'L',then:'C',petCy:250,rowY:w=>30+w*73.3,radius:7,crossings:true});</script>
+</main></body></html>

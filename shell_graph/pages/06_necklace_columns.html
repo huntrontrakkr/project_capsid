@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Necklace columns</title><link rel="stylesheet" href="style.css">
+<style>
+.v{cursor:pointer}
+.mono{font-family:var(--font-mono);color:var(--text-primary);letter-spacing:1px}
+.lg{display:flex;align-items:center;gap:8px;cursor:pointer;padding:3px 6px;border-radius:var(--radius);border:.5px solid transparent}
+.lg.on{background:var(--surface-1);border-color:var(--border-strong)}
+button[aria-pressed="true"]{border-color:var(--border-accent);color:var(--text-accent);background:var(--bg-accent)}
+</style></head><body><main>
+<h1>Necklaces in symmetric columns</h1>
+<p class="note">Each necklace stacked vertically in its own column, the alternating pair dead center, complements mirrored top to bottom. The outer pair (opposite pair and three-in-a-row) is the one unavoidable break in left-right symmetry.</p>
+<div style="display:flex;gap:8px;align-items:center;margin:0 0 6px;flex-wrap:wrap">
+<button id="bS" aria-pressed="false">Spread</button>
+<button id="bC" aria-pressed="true">Rows</button>
+<button id="bL" aria-pressed="false">Layered</button>
+<button id="bP" aria-pressed="false">12-gon</button>
+</div>
+<div id="cap" style="font-size:13px;color:var(--text-secondary);margin:0 0 2px">Top: all open · bottom: all filled</div>
+<svg id="g" width="100%" viewBox="0 0 380 610" role="img"><title>Necklaces in symmetric columns</title><desc>Each rotation class stacked in its own column, alternating class at center</desc></svg>
+<div id="out" style="font-size:13px;color:var(--text-secondary);line-height:1.7;margin:2px 0 8px;min-height:46px">Tap a node or a necklace to highlight its class.</div>
+<div id="leg" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 10px;font-size:13px;color:var(--text-secondary)"></div>
+<nav><a href="index.html">All graphs</a></nav>
+<script src="necklace_views.js"></script>
+<script>necklaceViews({views:['S','C','L','P'],start:'C',then:'S',petCy:304,rowY:w=>18+w*95.33,radius:6.5,bands:true});</script>
+</main></body></html>

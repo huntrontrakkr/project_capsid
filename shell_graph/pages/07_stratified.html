@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stratified 12-gon</title><link rel="stylesheet" href="style.css">
+<style>
+.v{cursor:pointer}
+.mono{font-family:var(--font-mono);color:var(--text-primary);letter-spacing:1px}
+.lg{display:flex;align-items:center;gap:8px;cursor:pointer;padding:3px 6px;border-radius:var(--radius);border:.5px solid transparent}
+.lg.on{background:var(--surface-1);border-color:var(--border-strong)}
+</style></head><body><main>
+<h1>Stratified 12-gon</h1>
+<p class="note">Each necklace shifted vertically onto its own line, lines pushed apart in 12-gon height order, and every line made symmetric about the center (k-th from the left averaged with k-th from the right).</p>
+<div style="font-size:13px;color:var(--text-secondary);margin:0 0 2px">Top: all open · bottom: all filled · one necklace per line</div>
+<svg id="g" width="100%" viewBox="0 0 380 456" role="img"><title>Stratified necklaces</title><desc>Each rotation class flattened onto its own horizontal line</desc></svg>
+<div id="out" style="font-size:13px;color:var(--text-secondary);line-height:1.7;margin:2px 0 8px;min-height:46px"></div>
+<div id="leg" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 10px;font-size:13px;color:var(--text-secondary)"></div>
+<nav><a href="index.html">All graphs</a></nav>
+<script src="strata_view.js"></script>
+<script>
+const Q=[[190.0,40.0],[275.0,68.0],[252.23,68.0],[337.23,96.0],[212.78,68.0],[297.78,152.0],[275.0,96.0],[360.0,208.0],[167.22,68.0],[252.23,124.0],[230.61,152.0],[294.73,180.0],[199.5,96.0],[294.73,292.0],[261.73,208.0],[337.23,376.0],[127.77,68.0],[211.61,152.0],[190.0,124.0],[243.89,292.0],[149.39,152.0],[235.55,236.0],[243.89,180.0],[297.78,320.0],[105.0,96.0],[178.61,180.0],[178.61,292.0],[252.23,348.0],[137.27,208.0],[211.61,320.0],[199.5,376.0],[275.0,404.0],[105.0,68.0],[180.5,96.0],[168.39,152.0],[242.73,208.0],[127.77,124.0],[201.39,180.0],[201.39,292.0],[275.0,376.0],[82.22,152.0],[136.11,292.0],[144.45,236.0],[230.61,320.0],[136.11,180.0],[190.0,348.0],[168.39,320.0],[252.23,404.0],[42.77,96.0],[118.27,208.0],[85.27,180.0],[180.5,376.0],[85.27,292.0],[149.39,320.0],[127.77,348.0],[212.78,404.0],[20.0,208.0],[105.0,376.0],[82.22,320.0],[167.22,404.0],[42.77,376.0],[127.77,404.0],[105.0,404.0],[190.0,432.0]];
+let gl='';[...new Set(Q.map(q=>q[1]))].forEach(y=>gl+=`<line x1="8" x2="372" y1="${y}" y2="${y}" stroke="var(--border)" stroke-width=".5"/>`);
+gl+=`<line x1="190" x2="190" y1="16" y2="448" stroke="var(--border)" stroke-width=".5" stroke-dasharray="3 4"/>`;
+strataView({Q,guides:gl});
+</script>
+</main></body></html>

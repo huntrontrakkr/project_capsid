@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Compact necklace rings</title><link rel="stylesheet" href="style.css">
+<style>
+.v{cursor:pointer}
+.v circle.b{fill:var(--surface-1);stroke:var(--text-secondary);stroke-width:.75}
+.v.n circle.b{stroke:#D85A30;stroke-width:2}
+.v.s circle.b{stroke:var(--text-accent);stroke-width:2.75}
+.mono{font-family:var(--font-mono);color:var(--text-primary);letter-spacing:1px}
+</style></head><body><main>
+<h1>Compact necklace rings</h1>
+<p class="note">Thin and tall: every necklace on an evenly spaced row one glyph apart, in rotation order. Row order and each ring's start and direction were searched for fewest crossings (988). Swapping open and filled turns the picture 180 degrees.</p>
+<div style="display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;font-size:13px;color:var(--text-secondary);margin:0 0 4px">
+<span style="display:flex;align-items:center;gap:6px"><svg width="22" height="8" aria-hidden="true"><line x1="0" y1="4" x2="22" y2="4" stroke="#1D9E75" stroke-width="2"/></svg>Rotate one step</span>
+<span style="display:flex;align-items:center;gap:6px"><svg width="22" height="8" aria-hidden="true"><line x1="0" y1="4" x2="22" y2="4" stroke="var(--text-muted)" stroke-width="1"/></svg>Add or remove one unit</span>
+</div>
+<svg id="g" width="100%" viewBox="0 0 380 620" role="img"><title>Necklace rings</title><desc>Shell states in rotation order on evenly spaced rows, rings wrapping off both sides</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs></svg>
+<div id="out" style="font-size:13px;color:var(--text-secondary);line-height:1.7;margin-top:2px;min-height:46px"></div>
+<nav><a href="index.html">All graphs</a></nav>
+<script src="ring_view.js"></script>
+<script>
+ringView({Q:[[190.0,30.0],[226.0,70.0],[250.0,70.0],[226.0,190.0],[130.0,70.0],[202.0,150.0],[250.0,190.0],[214.0,350.0],[154.0,70.0],[190.0,110.0],[178.0,150.0],[226.0,230.0],[130.0,190.0],[202.0,390.0],[190.0,350.0],[202.0,430.0],[178.0,70.0],[250.0,150.0],[214.0,110.0],[250.0,390.0],[154.0,150.0],[202.0,310.0],[250.0,230.0],[250.0,470.0],[154.0,190.0],[154.0,230.0],[178.0,390.0],[214.0,510.0],[166.0,350.0],[154.0,470.0],[178.0,430.0],[178.0,550.0],[202.0,70.0],[202.0,190.0],[226.0,150.0],[214.0,270.0],[166.0,110.0],[202.0,230.0],[226.0,390.0],[226.0,430.0],[130.0,150.0],[130.0,390.0],[178.0,310.0],[226.0,470.0],[130.0,230.0],[166.0,510.0],[130.0,470.0],[202.0,550.0],[178.0,190.0],[190.0,270.0],[178.0,230.0],[250.0,430.0],[154.0,390.0],[202.0,470.0],[190.0,510.0],[226.0,550.0],[166.0,270.0],[130.0,430.0],[178.0,470.0],[250.0,550.0],[154.0,430.0],[130.0,550.0],[154.0,550.0],[190.0,590.0]],ST:[[0],[4,8,16,32,1,2],[36,9,18],[40,20,10,5,34,17],[12,24,48,33,3,6],[44,25,50,37,11,22],[56,49,35],[42,21],[28,14,7],[41,52,26,13,38,19],[57,60,30,15,39,51],[46,29,58,53,43,23],[45,54,27],[61,62,31,47,55,59],[63]],yk:(k,x)=>30+40*k,stubL:62,stubR:318,bulge:40,greenBulge:24});
+</script>
+</main></body></html>

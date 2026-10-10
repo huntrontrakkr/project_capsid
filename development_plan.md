@@ -108,6 +108,8 @@ Larger boards and six players are evaluated first rather than trained from scrat
 
 # Design note: the shell state graph
 
+Code, layouts, and standalone pages for every graph are in `shell_graph/`.
+
 Worked out on 2026-10-10 while exploring the video game UI.
 
 - A hexagonal shell has 64 states. Single add or remove moves connect them as a 6-dimensional cube (192 edges, 6 per state).

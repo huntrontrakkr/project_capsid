@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shell codex pathfinder</title><link rel="stylesheet" href="style.css">
+<style>
+.v{cursor:pointer}
+.v circle.b{fill:var(--surface-1);stroke:var(--text-secondary);stroke-width:.75}
+.v.p circle.b{stroke:#BA7517;stroke-width:2}
+.v.t circle.b{stroke:#BA7517;stroke-width:3}
+.v.s circle.b{stroke:var(--text-accent);stroke-width:3}
+.mono{font-family:var(--font-mono);color:var(--text-primary);letter-spacing:1px}
+.ctl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 6px}
+.ctl label{display:block;font-size:13px;color:var(--text-secondary);margin-bottom:4px}
+.ctl input{width:100%;box-sizing:border-box}
+.err{font-size:13px;color:var(--text-danger)}
+</style></head><body><main>
+<h1>Shell codex with pathfinding</h1>
+<p class="note">Every necklace is a closed ring, stacked like latitude circles between the all-open and all-filled poles; the three-in-a-row ring encircles the alternating pair. Unit edges bow away from the axis. Tap a start state, then a destination, for the cheapest path. Ties go to the path with fewer moves.</p>
+<div class="ctl">
+<div><label for="rc">Rotation cost (per step)</label><input id="rc" type="number" min="0" step="0.5" value="0"></div>
+<div><label for="uc">Unit cost (add or remove)</label><input id="uc" type="number" min="0" step="0.5" value="1"></div>
+</div>
+<div id="err" class="err"></div>
+<svg id="g" width="100%" viewBox="0 0 380 698" role="img"><title>Shell codex with pathfinding</title><desc>Necklace rings stacked between the all-open and all-filled poles, joined by one-unit changes</desc></svg>
+<div id="out" style="font-size:13px;color:var(--text-secondary);line-height:1.75;margin-top:4px;min-height:60px"></div>
+<nav><a href="index.html">All graphs</a></nav>
+<script>
+const $=id=>document.getElementById(id),svg=$('g'),f=v=>v.toFixed(1);
+const rot=(s,k)=>{k=((k%6)+6)%6;return k?((s<<k)|(s>>(6-k)))&63:s};
+const pc=s=>{let c=0;while(s){c+=s&1;s>>=1}return c};
+const pat=s=>Array.from({length:6},(_,i)=>(s>>i)&1?'●':'○').join('');
+const Q=[[190.0,40.0],[164.0,63.7],[216.0,63.7],[243.0,241.9],[242.0,75.0],[236.0,162.0],[296.0,228.0],[300.9,362.5],[216.0,86.3],[190.0,138.0],[282.0,175.0],[249.0,297.7],[243.0,214.1],[308.0,415.0],[300.9,335.5],[296.0,470.0],[164.0,86.3],[98.0,175.0],[125.9,117.0],[131.0,429.7],[236.0,188.0],[174.0,349.0],[308.0,283.0],[236.0,510.0],[137.0,214.1],[131.0,268.3],[249.0,400.3],[125.9,581.0],[190.0,322.0],[236.0,536.0],[243.0,456.1],[242.0,623.0],[138.0,75.0],[137.0,241.9],[144.0,162.0],[190.0,376.0],[254.1,117.0],[131.0,297.7],[249.0,429.7],[243.0,483.9],[144.0,188.0],[72.0,415.0],[206.0,349.0],[144.0,510.0],[249.0,268.3],[254.1,581.0],[282.0,523.0],[216.0,611.7],[84.0,228.0],[79.1,362.5],[72.0,283.0],[137.0,483.9],[131.0,400.3],[98.0,523.0],[190.0,560.0],[164.0,611.7],[79.1,335.5],[84.0,470.0],[144.0,536.0],[138.0,623.0],[137.0,456.1],[164.0,634.3],[216.0,634.3],[190.0,658.0]];
+const R=[{"cy":75.0,"rx":52,"ry":13,"o":[4,8,16,32,1,2],"t":[0,60,120,180,240,300]},{"cy":623.0,"rx":52,"ry":13,"o":[59,55,47,31,62,61],"t":[180,240,300,360,420,480]},{"cy":124.0,"rx":74,"ry":14,"o":[9,18,36],"t":[90,210,330]},{"cy":574.0,"rx":74,"ry":14,"o":[54,45,27],"t":[270,390,510]},{"cy":175.0,"rx":92,"ry":15,"o":[10,20,40,17,34,5],"t":[0,60,120,180,240,300]},{"cy":523.0,"rx":92,"ry":15,"o":[53,43,23,46,29,58],"t":[180,240,300,360,420,480]},{"cy":228.0,"rx":106,"ry":16,"o":[6,3,33,48,24,12],"t":[0,60,120,180,240,300]},{"cy":470.0,"rx":106,"ry":16,"o":[57,60,30,15,39,51],"t":[180,240,300,360,420,480]},{"cy":283.0,"rx":118,"ry":17,"o":[22,11,37,50,25,44],"t":[0,60,120,180,240,300]},{"cy":415.0,"rx":118,"ry":17,"o":[41,52,26,13,38,19],"t":[180,240,300,360,420,480]},{"cy":349.0,"rx":128,"ry":27,"o":[7,35,49,56,28,14],"t":[30,90,150,210,270,330]},{"cy":349.0,"rx":16,"ry":14,"o":[21,42],"t":[180,360]}];
+const BEND=.3,C=349;
+let frame=`<ellipse cx="190" cy="${C}" rx="176" ry="336" fill="none" stroke="var(--text-secondary)" stroke-width=".6"/><ellipse cx="190" cy="${C}" rx="170" ry="330" fill="none" stroke="var(--text-secondary)" stroke-width=".4"/><line x1="190" y1="22" x2="190" y2="676" stroke="var(--border-strong)" stroke-width=".5" stroke-dasharray="2 5"/><line x1="16" y1="${C}" x2="364" y2="${C}" stroke="var(--border)" stroke-width=".5" stroke-dasharray="2 5"/>`;
+let mesh='';
+const bz=(p,c,q,t)=>[(1-t)**2*p[0]+2*(1-t)*t*c[0]+t*t*q[0],(1-t)**2*p[1]+2*(1-t)*t*c[1]+t*t*q[1]];
+for(let s=0;s<64;s++)for(let i=0;i<6;i++){const t=s^(1<<i);if(s<t){const p=Q[s],q=Q[t],mx=(p[0]+q[0])/2,my=(p[1]+q[1])/2,c=[mx+BEND*(mx-190),my],L=Math.hypot(q[0]-p[0],q[1]-p[1]),a=Math.min(.4,10.5/L),b=1-a;
+ const P0=bz(p,c,q,a),P2=bz(p,c,q,b),P1=[(1-a)*(1-b)*p[0]+((1-a)*b+a*(1-b))*c[0]+a*b*q[0],(1-a)*(1-b)*p[1]+((1-a)*b+a*(1-b))*c[1]+a*b*q[1]];
+ mesh+=`<path data-e="${s}-${t}" d="M${f(P0[0])} ${f(P0[1])}Q${f(P1[0])} ${f(P1[1])} ${f(P2[0])} ${f(P2[1])}"/>`}}
+let rings='';
+R.forEach(r=>{const n=r.o.length,step=360/n,pt=d=>{const a=d*Math.PI/180;return[190+r.rx*Math.cos(a),r.cy+r.ry*Math.sin(a)]};
+ for(let j=0;j<n;j++){const a=r.t[j],sp=d=>{const x=d*Math.PI/180;return Math.hypot(r.rx*Math.sin(x),r.ry*Math.cos(x))};
+  const da=Math.min(step*.42,11/sp(a)*180/Math.PI),b=a+step,db=Math.min(step*.42,11/sp(b)*180/Math.PI),A=pt(a+da),B=pt(b-db),u=r.o[j],v=r.o[(j+1)%n];
+  rings+=`<path data-r="${Math.min(u,v)}-${Math.max(u,v)}" d="M${f(A[0])} ${f(A[1])}A${r.rx} ${r.ry} 0 ${(b-db)-(a+da)>180?1:0} 1 ${f(B[0])} ${f(B[1])}"/>`}});
+let nodes='';
+for(let s=0;s<64;s++){const[x,y]=Q[s];let d='';
+ for(let i=0;i<6;i++){const a=(-90+i*60)*Math.PI/180,px=f(x+5.6*Math.cos(a)),py=f(y+5.6*Math.sin(a));
+  d+=(s>>i)&1?`<circle cx="${px}" cy="${py}" r="1.9" fill="var(--text-primary)"/>`:`<circle cx="${px}" cy="${py}" r="1.6" fill="none" stroke="var(--text-muted)" stroke-width=".8"/>`}
+ nodes+=`<g class="v" data-s="${s}"><circle class="b" cx="${x}" cy="${y}" r="9.5"/>${d}</g>`}
+svg.insertAdjacentHTML('beforeend',`<g>${frame}</g><g id="mesh" fill="none" stroke="var(--text-muted)" stroke-opacity=".35" stroke-width=".6">${mesh}</g><g id="rings" fill="none" stroke="#D85A30" stroke-width="1.3" stroke-linecap="round">${rings}</g>${nodes}`);
+let S=3,T=40;
+function costs(){const rc=parseFloat($('rc').value),uc=parseFloat($('uc').value);
+ if(!(rc>=0)||!(uc>=0)){$('err').textContent='Enter costs of zero or more.';return null}$('err').textContent='';return{rc,uc}}
+function route(c){const D=Array(64).fill(Infinity),N=Array(64).fill(Infinity),pv=Array(64).fill(-1),mv=Array(64).fill(null),dn=Array(64).fill(false);D[S]=0;N[S]=0;
+ const better=(d,n,v)=>d<D[v]-1e-9||(Math.abs(d-D[v])<1e-9&&n<N[v]);
+ for(;;){let u=-1;for(let i=0;i<64;i++)if(!dn[i]&&D[i]<Infinity&&(u<0||D[i]<D[u]-1e-9||(Math.abs(D[i]-D[u])<1e-9&&N[i]<N[u])))u=i;if(u<0)break;dn[u]=true;if(u===T)break;
+  for(let i=0;i<6;i++){const v=u^(1<<i);if(better(D[u]+c.uc,N[u]+1,v)){D[v]=D[u]+c.uc;N[v]=N[u]+1;pv[v]=u;mv[v]=['f',i]}}
+  for(const k of[1,-1]){const v=rot(u,k);if(v===u)continue;if(better(D[u]+c.rc,N[u]+1,v)){D[v]=D[u]+c.rc;N[v]=N[u]+1;pv[v]=u;mv[v]=['r',k]}}}
+ const path=[];for(let v=T;v!==S;v=pv[v])path.unshift(v);return{path,pv,mv,cost:D[T]}}
+function clear(){svg.querySelectorAll('.v').forEach(g=>g.classList.remove('s','t','p'));
+ svg.querySelectorAll('#mesh path').forEach(e=>{e.setAttribute('stroke','var(--text-muted)');e.setAttribute('stroke-opacity','.35');e.setAttribute('stroke-width','.6')});
+ svg.querySelectorAll('#rings path').forEach(e=>{e.setAttribute('stroke','#D85A30');e.setAttribute('stroke-width','1.3')})}
+const nd=s=>svg.querySelector(`.v[data-s="${s}"]`);
+function paint(){clear();
+ if(S===null){$('out').innerHTML='Tap a starting state, then a destination.';return}
+ nd(S).classList.add('s');
+ if(T===null){$('out').innerHTML=`<div><span class="mono">${pat(S)}</span> start</div><div>Now tap a destination.</div>`;return}
+ const c=costs();if(!c)return;
+ const r=route(c);let rows=`<div><span class="mono">${pat(S)}</span> start</div>`,nu=0,nr=0;
+ r.path.forEach(v=>{const u=r.pv[v],[ty,a]=r.mv[v],key=`${Math.min(u,v)}-${Math.max(u,v)}`;nd(v).classList.add('p');
+  let el,txt;if(ty==='f'){nu++;el=svg.querySelector(`#mesh path[data-e="${key}"]`);txt=((u>>a)&1?'Remove':'Add')+` at node ${a+1} · ${c.uc}`}
+  else{nr++;el=svg.querySelector(`#rings path[data-r="${key}"]`);txt=(a===1?'Rotate clockwise':'Rotate counterclockwise')+` · ${c.rc}`}
+  if(el){el.setAttribute('stroke','#BA7517');el.setAttribute('stroke-opacity','1');el.setAttribute('stroke-width','2.8');el.parentNode.appendChild(el)}
+  rows+=`<div><span class="mono">${pat(v)}</span> ${txt}</div>`});
+ nd(T).classList.add('t');
+ const cost=Math.round(r.cost*100)/100;
+ $('out').innerHTML=`<div style="font-family:var(--font-voice);font-size:15px;color:var(--text-primary)">Cost ${cost} · ${r.path.length} move${r.path.length===1?'':'s'} (${nu} unit change${nu===1?'':'s'}, ${nr} rotation${nr===1?'':'s'})</div>`+rows}
+svg.addEventListener('click',e=>{const g=e.target.closest('.v');if(!g){S=null;T=null;paint();return}const s=+g.dataset.s;
+ if(S===null||T!==null){S=s;T=null}else if(s===S){S=null}else T=s;paint()});
+['rc','uc'].forEach(id=>$(id).addEventListener('input',()=>{$('err').textContent='';paint()}));
+paint();
+</script>
+</main></body></html>

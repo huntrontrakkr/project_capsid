@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Necklaces, layered</title><link rel="stylesheet" href="style.css">
+<style>
+.v{cursor:pointer}
+.mono{font-family:var(--font-mono);color:var(--text-primary);letter-spacing:1px}
+.lg{display:flex;align-items:center;gap:8px;cursor:pointer;padding:3px 6px;border-radius:var(--radius);border:.5px solid transparent}
+.lg.on{background:var(--surface-1);border-color:var(--border-strong)}
+button[aria-pressed="true"]{border-color:var(--border-accent);color:var(--text-accent);background:var(--bg-accent)}
+</style></head><body><main>
+<h1>Layered view colored by necklace</h1>
+<p class="note">Rows by fill level (1, 6, 15, 20, 15, 6, 1), left-to-right order taken from the 12-gon. Toggle to watch each state slide between the two projections.</p>
+<div style="display:flex;gap:8px;align-items:center;margin:0 0 6px">
+<button id="bL" aria-pressed="true">Layered</button>
+<button id="bP" aria-pressed="false">12-gon</button>
+</div>
+<svg id="g" width="100%" viewBox="0 0 380 500" role="img"><title>Six-cube colored by necklace, layered</title><desc>64 shell states in rows, colored by 14 rotation classes</desc></svg>
+<div id="out" style="font-size:13px;color:var(--text-secondary);line-height:1.7;margin:2px 0 8px;min-height:46px">Tap a node or a necklace to highlight its class.</div>
+<div id="leg" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 10px;font-size:13px;color:var(--text-secondary)"></div>
+<nav><a href="index.html">All graphs</a></nav>
+<script src="necklace_views.js"></script>
+<script>necklaceViews({views:['L','P'],start:'L',petCy:250,rowY:w=>30+w*73.3,radius:7.5});</script>
+</main></body></html>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Six-cube projections</title><link rel="stylesheet" href="style.css">
+<style>
+.v{cursor:pointer}
+.v.n{stroke:#D85A30;stroke-width:2}
+.v.s{stroke:var(--text-accent);stroke-width:2.75}
+.mono{font-family:var(--font-mono);color:var(--text-primary);letter-spacing:1px}
+button[aria-pressed="true"]{border-color:var(--border-accent);color:var(--text-accent);background:var(--bg-accent)}
+</style></head><body><main>
+<h1>Six-cube: layered and 12-gon projections</h1>
+<p class="note">The plain Hamming cube of the shell, all open at the top and all filled at the bottom. Darker nodes have more units filled. Tap a node to see its six neighbors.</p>
+<div style="display:flex;gap:8px;align-items:center;margin:0 0 6px">
+<button id="bL" aria-pressed="true">Layered</button>
+<button id="bP" aria-pressed="false">12-gon</button>
+</div>
+<svg id="g" width="100%" viewBox="0 0 380 500" role="img"><title>Six-cube shell graph</title><desc>64 shell states joined by single add or remove edges</desc></svg>
+<div id="out" style="font-size:13px;color:var(--text-secondary);line-height:1.7;margin-top:4px;min-height:72px">Tap a node to see its state and its six neighbors.</div>
+<nav><a href="index.html">All graphs</a></nav>
+<script>
+const $=id=>document.getElementById(id),NS='http://www.w3.org/2000/svg',svg=$('g');
+const pc=s=>{let c=0;while(s){c+=s&1;s>>=1}return c};
+const pat=s=>Array.from({length:6},(_,i)=>(s>>i)&1?'●':'○').join('');
+const PET={},LAY={},th=i=>(i*30+15)*Math.PI/180,raw={};
+for(let s=0;s<64;s++){let x=0,y=0;for(let i=0;i<6;i++){const c=((s>>i)&1)-.5;x+=c*Math.cos(th(i));y+=c*Math.sin(th(i))}raw[s]=[x,y];PET[s]=[190+88*x,250+88*y]}
+const grp={};for(let s=0;s<64;s++){const k=Math.round(raw[s][0]*1000)+','+Math.round(raw[s][1]*1000);(grp[k]=grp[k]||[]).push(s)}
+Object.values(grp).forEach(g=>{if(g.length<2)return;const r=g.length>2?11:8;g.forEach((s,j)=>{const a=Math.PI/4+2*Math.PI*j/g.length;PET[s]=[PET[s][0]+r*Math.cos(a),PET[s][1]+r*Math.sin(a)]})});
+for(let w=0;w<=6;w++){const row=[...Array(64).keys()].filter(s=>pc(s)===w).sort((a,b)=>PET[a][0]-PET[b][0]||PET[a][1]-PET[b][1]);const n=row.length;row.forEach((s,j)=>LAY[s]=[190+(j-(n-1)/2)*17.9,30+w*73.3])}
+const eg=document.createElementNS(NS,'g');eg.setAttribute('stroke','var(--text-muted)');eg.setAttribute('stroke-width','.6');svg.appendChild(eg);
+const E=[];for(let s=0;s<64;s++)for(let i=0;i<6;i++){const t=s^(1<<i);if(s<t){const l=document.createElementNS(NS,'line');l.setAttribute('stroke-opacity','.45');eg.appendChild(l);E.push([s,t,l])}}
+const V=[];for(let s=0;s<64;s++){const c=document.createElementNS(NS,'circle');c.setAttribute('r','7');c.setAttribute('class','v');c.setAttribute('fill','var(--text-primary)');c.setAttribute('fill-opacity',(pc(s)/6).toFixed(2));c.setAttribute('stroke','var(--text-secondary)');c.setAttribute('stroke-width','.75');c.dataset.s=s;svg.appendChild(c);V.push([s,c])}
+let mode='L',cur={},S=null;for(let s=0;s<64;s++)cur[s]=LAY[s].slice();
+function draw(){V.forEach(([s,c])=>{c.setAttribute('cx',cur[s][0].toFixed(1));c.setAttribute('cy',cur[s][1].toFixed(1))});
+ E.forEach(([a,b,l])=>{const[x1,y1]=cur[a],[x2,y2]=cur[b],dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy)||1,o=Math.min(.45,7.5/L);
+  l.setAttribute('x1',(x1+dx*o).toFixed(1));l.setAttribute('y1',(y1+dy*o).toFixed(1));l.setAttribute('x2',(x2-dx*o).toFixed(1));l.setAttribute('y2',(y2-dy*o).toFixed(1))})}
+function go(m){if(m===mode)return;mode=m;$('bL').setAttribute('aria-pressed',m==='L');$('bP').setAttribute('aria-pressed',m==='P');
+ const to=m==='L'?LAY:PET,from={};for(let s=0;s<64;s++)from[s]=cur[s].slice();
+ const D=matchMedia('(prefers-reduced-motion: reduce)').matches?0:650,t0=performance.now();
+ function f(now){const t=D?Math.min(1,(now-t0)/D):1,e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+  for(let s=0;s<64;s++)cur[s]=[from[s][0]+(to[s][0]-from[s][0])*e,from[s][1]+(to[s][1]-from[s][1])*e];draw();if(t<1)requestAnimationFrame(f)}
+ requestAnimationFrame(f)}
+function sel(s){S=s;V.forEach(([v,c])=>c.classList.remove('s','n'));
+ E.forEach(([a,b,l])=>{const on=S!==null&&(a===S||b===S);l.setAttribute('stroke',on?'#D85A30':'var(--text-muted)');l.setAttribute('stroke-width',on?'2':'.6');l.setAttribute('stroke-opacity',on?'1':'.45');if(on)eg.appendChild(l)});
+ if(S===null){$('out').innerHTML='Tap a node to see its state and its six neighbors.';return}
+ const rm=[],ad=[];for(let i=0;i<6;i++){const t=S^(1<<i);V[t][1].classList.add('n');((S>>i)&1?rm:ad).push(t)}
+ V[S][1].classList.add('s');
+ const list=a=>a.length?a.map(t=>`<span class="mono">${pat(t)}</span>`).join(' &nbsp;'):'none';
+ $('out').innerHTML=`<div><span class="mono">${pat(S)}</span> &nbsp;${pc(S)} filled, ${6-pc(S)} open</div><div>Add one (${ad.length}): ${list(ad)}</div><div>Remove one (${rm.length}): ${list(rm)}</div>`}
+svg.addEventListener('click',e=>{const c=e.target.closest('.v');if(!c){sel(null);return}const s=+c.dataset.s;sel(S===s?null:s)});
+$('bL').onclick=()=>go('L');$('bP').onclick=()=>go('P');
+draw();
+</script>
+</main></body></html>

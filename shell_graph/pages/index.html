@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Shell state graphs</title><link rel="stylesheet" href="style.css">
+<style>
+ol{padding-left:20px;margin:0}
+li{margin:0 0 12px}
+li a{color:var(--text-accent);font-weight:500}
+li span{display:block;font-size:13px;color:var(--text-secondary)}
+</style></head><body><main>
+<h1>Shell state graphs</h1>
+<p class="note">The 64 states of a six-node hexagonal shell, joined by one-unit changes (the 6-cube) and grouped by rotation into 14 necklaces. Each page is self-contained and works offline. Crossing counts are unit-edge crossings computed by <code>shell_graph.py</code>.</p>
+<ol>
+<li><a href="01_orbit_routing.html">Necklaces as polygons</a><span>First sketch: rotation orbits drawn as hexagons, triangles and pairs in rows by fill level, with tap-to-route and a dominance toggle.</span></li>
+<li><a href="02_six_cube_projections.html">Six-cube projections</a><span>The plain Hamming cube, layered by fill level or in the 12-gon (Petrie) projection.</span></li>
+<li><a href="03_necklace_twelve_gon.html">12-gon colored by necklace</a><span>Complementary necklaces share a hue and sit point-symmetric about the center.</span></li>
+<li><a href="04_necklace_layered.html">Layered view colored by necklace</a><span>Same coloring in rows; toggle animates between the two projections.</span></li>
+<li><a href="05_necklace_rows.html">Necklace rows</a><span>Each necklace a contiguous block in rotation order, complements aligned. 1,516 crossings against 906 for plain rows.</span></li>
+<li><a href="06_necklace_columns.html">Necklace columns</a><span>Each necklace stacked in its own vertical column, alternating pair dead center.</span></li>
+<li><a href="07_stratified.html">Stratified 12-gon</a><span>Every necklace flattened onto its own line in 12-gon height order and made symmetric. 990 crossings.</span></li>
+<li><a href="08_stratified_arcs.html">Stratified arcs</a><span>Three-in-a-row split around the alternating pair, strata bent into nested arcs that shorten total edge length. 1,076 crossings.</span></li>
+<li><a href="09_arc_rings.html">Necklace rings on arcs</a><span>States drawn as shell patterns, each necklace in rotation order with rings wrapping off both edges. 1,164 crossings.</span></li>
+<li><a href="10_compact_rings.html">Compact necklace rings</a><span>Thin and tall rows one glyph apart, searched for fewest crossings. 988 crossings.</span></li>
+<li><a href="11_codex_pathfinder.html">Shell codex with pathfinding</a><span>Closed necklace rings stacked between the poles, bowed unit edges, and cheapest-path search with configurable rotation and unit costs. 1,072 crossings.</span></li>
+</ol>
+</main></body></html>

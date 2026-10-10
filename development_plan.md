@@ -18,13 +18,15 @@ The engine needs an answer (or a config flag) for every item below before any tr
 
 | # | Item | Proposed default | Config flag |
 | - | ---- | ---------------- | ----------- |
-| 1 | **Inactivity rule.** Harvest income goes into cell stores, and coffers only fill when a rival pays in (Move 5). As written, any player nobody paid has an empty coffer, places nothing during harvest, and becomes inactive. | A player is inactive only when they hold no units anywhere on the board after the harvest phase. | `inactivity_rule` |
-| 2 | **Beacon gate on shell modification** (open question 1). Greedy 6-player runs built about 0.8 beacons per game, so a beacon gate would make modify nearly unavailable. | No beacon gate. | `modify_requires_beacon` |
+| 1 | **Inactivity rule.** Harvest income goes into cell stores, and coffers only fill when a rival pays in (Move 5). As written, any player nobody paid has an empty coffer, places nothing during harvest, and becomes inactive. | **Decided 2026-10-10 (provisional):** a player is inactive only when they hold no units anywhere on the board after the harvest phase. Their beacons and tally stay. | `inactivity_rule` |
+| 2 | **Beacon gate on shell modification.** Greedy 6-player runs built about 0.8 beacons per game, so a beacon gate would make modify nearly unavailable. | **Decided 2026-10-10:** no beacon gate. Anyone with units in the cell may modify for 1 unit. | `modify_requires_beacon` |
 | 3 | **Beacon build cost** (open question 2). | Leave configurable, settle with Phase 2 sweeps. Capture stays at 1 per adjacent store. | `beacon_build_cost`, `beacon_capture_cost` |
 | 4 | **Turn-order tie-breaks** (open question 3). | Fall back to the setup tie-break, then a seeded random draw. | `tiebreak_mode` |
 | 5 | **Shift semantics.** The rules allow one shift move to rotate a shell any number of positions. | One shift move rotates by any k in 1 to 5, free for the dominant player, 1 unit otherwise. | `shift_cost_nondominant` |
 | 6 | **Setup bid.** The bid is secret and simultaneous, which is hidden information that AlphaZero-style search does not handle. | Training v1 skips the bid and uses templated or seeded random setups. The bid returns in a later phase. | `setup_mode` |
 | 7 | **Active phase length.** The phase ends once every player has consecutively had a cost-free turn or passed. That terminates, but a training run still needs a safety cap. | Hard cap on turns per round. Games that hit it are logged as anomalies. | `max_turns_per_round` |
+| 8 | **Chained transfers** (open question 1). As written, units can move more than once per turn. | Allowed for now. A flag limits each unit to one crossing per turn for comparison. | `multi_transfer` |
+| 9 | **Early end** (open question 5). Inactive players keep scoring, so ending the game when one active player remains can cut their chances. | Play every round; compare tallies at the end. | `early_end` |
 
 # Phase 1: Rules engine
 
@@ -37,7 +39,7 @@ One deterministic engine serves the bots, the training loop, and later the game 
 | Field | Shape | Notes |
 | ----- | ----- | ----- |
 | Cell stores | `[MAX_CELLS, MAX_PLAYERS]` int | `MAX_CELLS = 256`, `MAX_PLAYERS = 6` |
-| Shells | `[MAX_CELLS]` uint8 | 6-bit ring, bit i is the node on edge i |
+| Shells | `[MAX_CELLS]` uint8 | 6-bit ring, bit i is the node at the corner between edges i and i+1 |
 | Adjacency | `[MAX_CELLS, 6]` int | neighbor index per edge, -1 for none |
 | Beacon positions | `[MAX_VERTICES, 3]` int | the 2 or 3 cells touching each shared vertex |
 | Beacon owner | `[MAX_VERTICES]` int | -1 for empty |

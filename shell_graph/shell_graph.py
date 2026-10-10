@@ -1,7 +1,7 @@
 """Shell state graph for project_capsid.
 
-A hexagonal cell's shell is a 6-node binary ring (bit i = the node on edge i,
-counted clockwise from the top), so a shell has 64 states.
+A hexagonal cell's shell is a 6-node binary ring (bit i = the node at the corner
+between edges i and i+1, edges counted clockwise from the top), so a shell has 64 states.
 
 Graph structure
     unit edges      add or remove one unit: the 6-cube, 192 edges, 6 per state

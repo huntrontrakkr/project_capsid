@@ -1,19 +1,19 @@
 # Open Questions
 
-Items left undecided in the `adapted-rules` revision of `game_rules.md`. Each has the context from the April 2026 simulation work and the options on the table.
+Items still undecided in `game_rules.md`, each with its context and the options on the table. Decisions reached so far are listed at the end.
 
-## 1. Does modifying a shell require an adjacent owned beacon?
+## 1. Can units move more than once per turn?
 
-**Original spec:** Modify was only available at a cell adjacent to a beacon the active player owned.
+**Current text:** A turn may include any number of transfers, at any cells and in any order. Nothing stops the same units from crossing again, so a group can travel A → B → C in one turn, paying at each crossing.
 
-**April work:** Modification was set at 1 unit and bundled with rotation as shell ops. The beacon requirement was never decided in either direction.
+**Provisional:** allowed, as written.
+
+**Why it matters:** with free crossings, a large group could sweep across the board in a single turn, which makes fronts very fluid and makes free crossings (H = 0) much more valuable than other costs.
 
 **Options:**
-- Keep the requirement. Beacons then gate shell control, which gives them a second use beyond scoring.
-- Drop it and gate modification by dominance in the cell, matching rotation.
-- Keep it as a game-mode setting.
-
-**Why it matters:** Free rotation already makes shells central (57% of activity). The modify gate decides how much of that depends on holding beacons, and beacons are already hard to build.
+- Allow it, as written.
+- Limit each unit to one crossing per turn.
+- Allow a fixed number of crossings per unit per turn.
 
 ## 2. Baseline beacon build cost: 1 or 2 units per adjacent store?
 
@@ -39,6 +39,40 @@ Items left undecided in the `adapted-rules` revision of `game_rules.md`. Each ha
 - Fall back to a fixed seating order.
 - Use a random draw each time a tie is unresolved.
 
+## 4. Starting setup without the bid
+
+The first training runs skip the secret bid (see `development_plan.md`, Phase 0 item 6), so they need a fixed starting position.
+
+**To decide:** units per player, how many starting cells each player gets and how they are chosen, which board sizes to use for which player counts, and the number of rounds (the plan assumes 6).
+
+## 5. Does the game still end early when one active player remains?
+
+**Current text:** "The game also ends early if one player is the last one remaining."
+
+**Gap:** Inactive players now keep their beacons and keep scoring every round, so an inactive player can still win on tally. Ending the game as soon as one active player remains cuts that short.
+
+**Options:**
+- Play every round and compare tallies at the end.
+- End early and compare tallies at that point.
+- End early and award the win to the last active player.
+
+## 6. Inactivity rule (provisional)
+
+**Decided for now:** a player is inactive only when they hold no units in any cell store after the harvest phase. Their beacons stay, keep scoring, and can be captured, and their tally stands. To be revisited after playtests.
+
+## Decided on 2026-10-10
+
+- Transfer cost is a rate: moving _n_ units costs ceil(_n_ / _m_) × _p_.
+- Shell nodes point at the cell's corners (the beacon positions), and pair across a shared edge by reflection: node _d+k_ of A with node _d+2−k_ of B.
+- Any player with units in a cell may modify its shell for 1 unit, with no dominance or beacon requirement. (Was open question 1.)
+- Where shell units come from does not affect play: the unit paid is discarded and a neutral unit from an unlimited supply fills the node.
+- Starting shells are part of the map: set by a template or drawn at random.
+- Dominance is checked at the moment of each move.
+- A beacon is a marker and is not paid for; the cost is the units from the adjacent stores.
+- Paying into another player's coffer has no extra fee, but the units count as expended.
+- Harvest income is computed from the board at the start of harvest and applied at once.
+- The active phase ends after one cost-free turn or pass by each active player in a row; any costly turn restarts the count.
+
 ## Suggested way to close these
 
-Questions 2 and 3 are balance and bookkeeping choices that self-play or a few human playtests can settle. Question 1 changes rules structure, so it is worth deciding first.
+Questions 2 to 4 are balance and bookkeeping choices that self-play or a few human playtests can settle. Questions 1 and 5 change how the game plays, so they are worth deciding first.

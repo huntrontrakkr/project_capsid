@@ -142,9 +142,23 @@ If a player has been made inactive at this point, the setup may allow a buy-in, 
 
 ### 1. Transfer Units Between Cells
 
-A player may move units between adjacent cells at a possible cost. The cost is written _p:m_, where _p_ is the number of units to pay and _m_ is the maximum number of units that can then be moved. It is calculated for a given adjacency from the cell shells (see Calculating Costs). The payment _p_ is made in full from the player's units in the store of the cell they are moving from, before any units move.
+A player may move units between adjacent cells at a possible cost. The cost is a rate written _p:m_: for every _m_ units moved, or any part of _m_, the player pays _p_ units. It is calculated for a given adjacency from the cell shells (see Calculating Costs). The payment is made from the player's units in the store of the cell they are moving from, and the paid units are discarded.
 
-Example: a player moves from cell A to cell B at a cost of 2:5. The player first pays 2 units, then moves up to 5 units. If the player holds 5 units in cell A and wants to move as many as possible, the player pays 2 from the store and moves the remaining 3.
+```
+payment = ceil(n / m) × p          (n = units moved)
+units taken from the store = n + payment
+```
+
+Example: a player holds 13 units in cell A and the cost to cell B is 2:5.
+
+| Units moved | Blocks of 5 | Payment | Units taken from A |
+| ----------- | ----------- | ------- | ------------------ |
+| 3           | 1           | 2       | 5                  |
+| 5           | 1           | 2       | 7                  |
+| 9           | 2           | 4       | 13                 |
+| 10          | 2           | 4       | 14 (not enough)    |
+
+Moving 5 takes 7 units: 2 are paid and 5 move. Moving 10 would take 14, one more than the player holds, so the most the player can move is 9 (paying 4, using all 13). A partial block still costs the full _p_: a player holding only 5 units pays 2 and moves the remaining 3.
 
 If the cost is _0:m_, any number of units may move freely to the adjacent cell. This is a cost-free move. If the cost is _p:0_, movement is blocked between the two cells and no units may move at any cost.
 
@@ -166,7 +180,21 @@ cost = p:m
 
 Edge cases: H = 0 (identical across the edge) gives a free crossing with no cap on units moved, and H = Total (every pair dissimilar) blocks the crossing.
 
-The reduced form separates into a direction (the quotient p:m) and a scale (g, the GCD), both derived from a single Hamming comparison. Because the GCD is unintuitive for players, a player-facing presentation may prefer to show only the resulting p:m.
+On hexagonal cells (Total = 6) only these costs can occur:
+
+| H | ~H | Cost | Moving 1 unit | Moving 6 units |
+| - | -- | ---- | ------------- | -------------- |
+| 0 | 6  | free | 0             | 0              |
+| 1 | 5  | 1:5  | 1             | 2              |
+| 2 | 4  | 1:2  | 1             | 3              |
+| 3 | 3  | 1:1  | 1             | 6              |
+| 4 | 2  | 2:1  | 2             | 12             |
+| 5 | 1  | 5:1  | 5             | 30             |
+| 6 | 0  | blocked | -          | -              |
+
+The 2:5 in the transfer example is for illustration and cannot occur on a 6-node shell, since the reduced _p_ + _m_ always divides the shell size.
+
+The reduced form separates into a direction (the quotient p:m) and a scale (g, the GCD), both derived from a single Hamming comparison. Reduction only changes the price of a partial block: unreduced, 2:4 would charge 2 to move a single unit, while the reduced 1:2 charges 1. Because the GCD is unintuitive for players, a player-facing presentation may prefer to show only the resulting p:m.
 
 // TODO: Add visualizations and worked examples. This section is core to the game and may need a page of its own.
 
@@ -225,6 +253,7 @@ The original design capped the units any cell store could hold at a limit _L_. S
 | Beacon permanence | Unspecified | Permanent once built, scores for the owner every round, changes hands only by capture |
 | Objective | Beacons held across rounds | Highest tally, earned at 1 per beacon per round |
 | ~H definition | Written as "Hamming distance - total shell size" | Corrected to Total - H |
+| Transfer cost | Worded as "pay p, then move up to m", which reads as a one-time cap | Clarified as a rate: moving n units costs ceil(n / m) × p |
 
 ## Simulation findings behind the changes
 

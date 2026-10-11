@@ -34,6 +34,7 @@ import numpy as np
 import optax
 
 from .board import GenParams, generate
+from .bots import greedy_action
 from .jax_engine import KINDS, Engine, Layout, State
 from .net import Net
 from .rules import Config
@@ -72,6 +73,9 @@ class TrainConfig:
     hours: float = 1.0
     seed: int = 0
     resume: int = 0                # 1: continue from out/runs/<run>/latest.msgpack if it exists
+    init_from: str = ""            # start from another run's weights: "<run>" (its latest) or "<run>/<checkpoint>"
+    greedy_mix: float = 0.0        # share of self-play games with the greedy bot in one seat
+    bf16: int = 0                  # 1: run the network in bfloat16 (parameters stay float32)
 
 
 class Buffer(NamedTuple):
@@ -86,7 +90,8 @@ class Buffer(NamedTuple):
 
 
 STAT_KEYS = ("decisions", "root_ppl", "prior_ppl", "legal", "games", "game_steps", "game_turns", "capped_turns",
-             "capped_rounds", "truncated", "p0_win", "draw", "p0_loss", "tally_sum", "rounds") + tuple(f"n_{k}" for k in KINDS)
+             "capped_rounds", "truncated", "p0_win", "draw", "p0_loss", "tally_sum", "rounds", "vg_games", "vg_win",
+             "vg_draw") + tuple(f"n_{k}" for k in KINDS)
 
 
 class Trainer:
@@ -97,7 +102,7 @@ class Trainer:
                           max_turns_per_round=tc.max_turns_per_round, start_units=tc.start_units, rounds=tc.rounds,
                           beacon_build_cost=tc.beacon_build_cost, early_end=bool(tc.early_end))
         self.eng = Engine(L, self.cfg, tc.max_steps)
-        self.net = Net(tc.hidden, tc.layers)
+        self.net = Net(tc.hidden, tc.layers, jnp.bfloat16 if tc.bf16 else jnp.float32)
         self.vcorner = jnp.asarray(L.vcorner)
         gp = GenParams(radius=tc.radius, start_cells=tc.start_cells)
         boards = [L.board_arrays(generate(s, gp)) for s in range(tc.boards)]
@@ -105,6 +110,7 @@ class Trainer:
         self.shells = jnp.asarray(np.stack([b[1] for b in boards]))
         self.starts = jnp.asarray(np.stack([b[2] for b in boards]))
         self.vstep = jax.vmap(self.eng.step)
+        self.vstep_fast = jax.vmap(lambda s, a: self.eng.step(s, a, check=False))   # for actions known to be legal
         self.vlegal = jax.vmap(self.eng.legal)
         self.voutcome = jax.vmap(self.eng.outcome)
         self.opt = optax.chain(optax.clip_by_global_norm(1.0), optax.adamw(tc.lr, weight_decay=1e-4))
@@ -125,7 +131,7 @@ class Trainer:
         return jax.vmap(one)(states)
 
     def recurrent_fn(self, params, key, action, states):
-        new = self.vstep(states, action)
+        new = self.vstep_fast(states, action)
         logits, value = self.evaluate(params, new)
         logits = jnp.where(self.vlegal(new), logits, NEG)
         z0 = self.voutcome(new)
@@ -156,18 +162,29 @@ class Trainer:
         tc, E = self.tc, self.tc.envs
         e = jnp.arange(E)
 
+        n_greedy = int(round(tc.greedy_mix * E))
+        greedy_seat = e % 2                            # in the first n_greedy games, greedy plays this seat
+
         def body(carry, key):
             states, buf, stats = carry
-            k_search, k_reset = jax.random.split(key)
+            k_search, k_reset, k_greedy = jax.random.split(key, 3)
             out, logits, legal = self.search(params, k_search, states, tc.sims)
+            action = out.action
+            by_greedy = jnp.zeros(E, bool)
+            if n_greedy:
+                g_states = jax.tree.map(lambda x: x[:n_greedy], states)
+                ga = jax.vmap(lambda s, k: greedy_action(self.eng, s, k))(g_states, jax.random.split(k_greedy, n_greedy))
+                by_greedy = (e < n_greedy) & (states.player == greedy_seat)
+                action = jnp.where(by_greedy, jnp.zeros(E, jnp.int32).at[:n_greedy].set(ga), action)
             w, idx = jax.lax.top_k(out.action_weights, tc.topk)
             w = w / jnp.maximum(w.sum(-1, keepdims=True), 1e-9)
             buf = buf._replace(
                 states=jax.tree.map(lambda b, x: b.at[e, buf.ptr].set(x), buf.states, states),
                 pidx=buf.pidx.at[e, buf.ptr].set(idx), pw=buf.pw.at[e, buf.ptr].set(w),
-                ready=buf.ready.at[e, buf.ptr].set(False), ep=buf.ep.at[e, buf.ptr].set(buf.cur_ep),
+                ready=buf.ready.at[e, buf.ptr].set(False),
+                ep=buf.ep.at[e, buf.ptr].set(jnp.where(by_greedy, -2, buf.cur_ep)),   # greedy's moves never train
                 ptr=(buf.ptr + 1) % tc.buffer_per_env)
-            new = self.vstep(states, out.action)
+            new = self.vstep_fast(states, action)
             ended = new.done
             z0 = self.voutcome(new)
             sel = (buf.ep == buf.cur_ep[:, None]) & ended[:, None] & ~buf.ready
@@ -178,7 +195,7 @@ class Trainer:
             def ppl(p):
                 p = jnp.where(legal, p, 0.0)
                 return jnp.exp(-(p * jnp.log(jnp.maximum(p, 1e-12))).sum(-1))
-            kinds = self.layout.kind(out.action)
+            kinds = self.layout.kind(action)
             fe = ended.astype(jnp.float32)
             upd = {"decisions": E, "root_ppl": ppl(out.action_weights).sum(), "prior_ppl": ppl(jax.nn.softmax(logits)).sum(),
                    "legal": legal.sum(), "games": fe.sum(), "game_steps": (fe * new.steps).sum(),
@@ -186,6 +203,9 @@ class Trainer:
                    "capped_rounds": (fe * new.capped_rounds).sum(), "truncated": (fe * new.truncated).sum(),
                    "p0_win": (fe * (z0 > 0)).sum(), "draw": (fe * (z0 == 0)).sum(), "p0_loss": (fe * (z0 < 0)).sum(),
                    "tally_sum": (fe * new.tally.sum(-1)).sum(), "rounds": (fe * new.round).sum()}
+            vg = fe * (e < n_greedy)                                  # finished games against greedy
+            z_learner = jnp.where(greedy_seat == 0, -z0, z0)
+            upd.update(vg_games=vg.sum(), vg_win=(vg * (z_learner > 0)).sum(), vg_draw=(vg * (z_learner == 0)).sum())
             for j, k in enumerate(KINDS):
                 upd[f"n_{k}"] = (kinds == j).sum()
             stats = {k: stats[k] + upd[k] for k in STAT_KEYS}
@@ -267,6 +287,9 @@ def summarize(stats, tc):
                    capped_round_share=s["capped_rounds"] / max(s["rounds"], 1),
                    truncated=s["truncated"] / g, p0_win=s["p0_win"] / g, draw=s["draw"] / g, p0_loss=s["p0_loss"] / g,
                    tally=s["tally_sum"] / g)
+    if s["vg_games"]:
+        out["vs_greedy_selfplay"] = {"games": s["vg_games"], "win": s["vg_win"] / s["vg_games"],
+                                     "draw": s["vg_draw"] / s["vg_games"]}
     out["move_mix"] = {k: s[f"n_{k}"] / d for k in KINDS}
     return out
 
@@ -295,6 +318,14 @@ def main():
     print(f"run {tc.run}: radius {tc.radius} ({tr.layout.n} slots, {tr.layout.n_actions} actions), "
           f"{n_params:,} parameters, {tc.envs} games x {tc.sims} simulations", flush=True)
 
+    if tc.init_from:
+        src, _, name = tc.init_from.partition("/")
+        data = (out.parent / src / ((name or "latest") + ".msgpack")).read_bytes()
+        params = (flax.serialization.msgpack_restore(data)["params"] if not name
+                  else flax.serialization.from_bytes(params, data))
+        params = jax.tree.map(jnp.asarray, params)
+        opt_state = tr.opt.init(params)
+        print(f"initialized from {tc.init_from}", flush=True)
     prev_params, start, elapsed0 = params, 1, 0.0
     latest = out / "latest.msgpack"
     if tc.resume and latest.exists():
@@ -335,6 +366,8 @@ def main():
             if "game_steps" in rec:
                 msg += (f" | game {rec['game_steps']:.0f} dec, {rec['decisions_per_turn']:.1f}/turn, "
                         f"{rec['turns_per_round']:.1f} turns/round, p0 {rec['p0_win']:.2f}")
+            if "vs_greedy_selfplay" in rec:
+                msg += f" | vs greedy {rec['vs_greedy_selfplay']['win']:.2f} ({rec['vs_greedy_selfplay']['games']:.0f})"
             if "vs_random" in rec:
                 msg += f" | vs random {rec['vs_random']['win']:.2f}, vs prev {rec['vs_prev']['win']:.2f}"
             print(msg, flush=True)

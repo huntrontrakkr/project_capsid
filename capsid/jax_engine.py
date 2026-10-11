@@ -199,70 +199,68 @@ class Engine:
         return jnp.concatenate([t.ravel(), d.ravel(), sh.ravel(), mo.ravel(), b, (~s.done)[None]])
 
     # ------------------------------------------------------------------ moves
-    def step(self, s, a):
-        """The state after action a. An illegal action ends the turn instead."""
-        L = self.L
-        a = jnp.where(self.legal(s)[a], a, L.END)
-        s2 = jax.lax.switch(L.kind(a), [self._transfer, self._destroy, self._shift, self._modify, self._beacon,
-                                         self._end], s, a)
+    def step(self, s, a, check=True):
+        """The state after action a. With check, an illegal action ends the turn instead; search
+        and the bots only pick legal actions, so they skip the check.
+
+        Every move kind's effect is computed directly as a few scatters weighted by whether this
+        action is of that kind, rather than through lax.switch, which under vmap evaluates every
+        branch in full (including the board view and the whole transfer table)."""
+        L, cfg, N = self.L, self.cfg, self.L.n
+        if check:
+            a = jnp.where(self.legal(s)[a], a, L.END)
+        kind = L.kind(a)
+        is_t, is_d, is_s, is_m, is_b, is_e = [kind == j for j in range(6)]
+        me, opp = s.player, 1 - s.player
+        clip = lambda x, hi: jnp.clip(x, 0, hi - 1)
+        i = clip(a - L.T0, 18 * N)
+        ct, et, bt = i // 18, (i // 3) % 6, i % 3
+        i = clip(a - L.D0, 2 * N)
+        cd, bd = i // 2, i % 2
+        i = clip(a - L.S0, 5 * N)
+        cs, ks = i // 5, i % 5 + 1
+        i = clip(a - L.M0, 6 * N)
+        cm, node = i // 6, i % 6
+        v = clip(a - L.B0, L.v)
+
+        # transfer: only the one crossing that is used
+        nb_raw = jnp.where(s.mask[jnp.maximum(self.nbr0[ct, et], 0)], self.nbr0[ct, et], -1)
+        nb = jnp.maximum(nb_raw, 0)
+        p, m = self.P[s.shells[ct], s.shells[nb], et], self.M[s.shells[ct], s.shells[nb], et]
+        mine_t = s.stores[ct, me]
+        movable = mine_t if cfg.multi_transfer else mine_t - s.arrived[ct]
+        nmax = jnp.minimum(max_affordable(mine_t, p, m), movable)
+        n_t = jnp.stack([jnp.int32(1), nmax // 2, nmax])[bt] * is_t
+        m1 = jnp.maximum(m, 1)
+        pay_t = jnp.where(p == 0, 0, (n_t + m1 - 1) // m1 * p) * is_t
+        # destroy, shift, modify, beacon
+        n_d = jnp.where(bd == 0, 1, jnp.minimum(s.stores[cd, me], s.stores[cd, opp])) * is_d
+        dom_cs = jnp.where(s.stores[cs, 0] > s.stores[cs, 1], 0, jnp.where(s.stores[cs, 1] > s.stores[cs, 0], 1, -1))
+        cost_s = jnp.where(dom_cs == me, 0, cfg.shift_cost) * is_s
+        cost_m = cfg.modify_cost * is_m
+        vcells = jnp.where((self.vcells0[v] >= 0) & s.mask[jnp.maximum(self.vcells0[v], 0)], self.vcells0[v], -1)
+        cost_b = jnp.where(s.beacons[v] < 0, cfg.beacon_build_cost, cfg.beacon_capture_cost) * is_b
+
+        st = s.stores.at[ct, me].add(-(n_t + pay_t)).at[nb, me].add(n_t)
+        st = st.at[cd, me].add(-n_d).at[cd, opp].add(-n_d)
+        st = st.at[cs, me].add(-cost_s).at[cm, me].add(-cost_m)
+        st = st.at[jnp.maximum(vcells, 0), me].add(jnp.where(vcells >= 0, -cost_b, 0))
+        shells = s.shells.at[cs].set(jnp.where(is_s, rot(s.shells[cs], ks), s.shells[cs]))
+        shells = shells.at[cm].set(jnp.where(is_m, shells[cm] ^ (1 << node), shells[cm]))
+        spent = (s.spent | (pay_t > 0) | (n_d > 0) | (cost_s > 0) | (cost_m > 0) | (cost_b > 0))
+        t = jnp.where(is_t, 0, jnp.where(is_d, 1, jnp.where(is_s | is_m, 2, 3)))
+        g = jnp.asarray(self.group_of, jnp.int32)[t]
+        g0, g1 = s.groups[0], s.groups[1]
+        groups = jnp.where(g0 < 0, jnp.stack([g, jnp.int32(-1)]),
+                           jnp.where((g0 != g) & (g1 < 0), jnp.stack([g0, g]), s.groups))
+        moved = s._replace(stores=st, shells=shells, beacons=s.beacons.at[v].set(jnp.where(is_b, me, s.beacons[v])),
+                           arrived=s.arrived.at[nb].add(n_t), spent=spent, groups=groups.astype(jnp.int32),
+                           moves=s.moves + 1)
+        s2 = jax.tree.map(lambda x, y: jnp.where(is_e, x, y), self._end(s, a), moved)
         s2 = s2._replace(steps=s.steps + 1)
         trunc = (s2.steps >= self.max_steps) & ~s2.done
         s2 = s2._replace(done=s2.done | trunc, truncated=trunc)
         return jax.tree.map(lambda x, y: jnp.where(s.done, x, y), s, s2)
-
-    def _moved(self, s, t):
-        g = self.group_of[t]
-        g0, g1 = s.groups[0], s.groups[1]
-        groups = jnp.where(g0 < 0, jnp.array([g, -1]), jnp.where((g0 != g) & (g1 < 0), jnp.stack([g0, g]), s.groups))
-        return s._replace(groups=groups.astype(jnp.int32), moves=s.moves + 1)
-
-    def _transfer(self, s, a):
-        i = a - self.L.T0
-        c, e, b = i // 18, (i // 3) % 6, i % 3
-        nbr, _, _ = self.view(s.mask)
-        nmax, p, m = self._transfer_amounts(s, nbr)
-        nm, p, m, nb = nmax[c, e], p[c, e], jnp.maximum(m[c, e], 1), jnp.maximum(nbr[c, e], 0)
-        n = jnp.stack([jnp.int32(1), nm // 2, nm])[b]
-        pay = jnp.where(p == 0, 0, (n + m - 1) // m * p)
-        me = s.player
-        stores = s.stores.at[c, me].add(-(n + pay)).at[nb, me].add(n)
-        s = s._replace(stores=stores, arrived=s.arrived.at[nb].add(n), spent=s.spent | (pay > 0))
-        return self._moved(s, 0)
-
-    def _destroy(self, s, a):
-        i = a - self.L.D0
-        c, b = i // 2, i % 2
-        me = s.player
-        dmax = jnp.minimum(s.stores[c, me], s.stores[c, 1 - me])
-        n = jnp.where(b == 0, 1, dmax)
-        s = s._replace(stores=s.stores.at[c, me].add(-n).at[c, 1 - me].add(-n), spent=s.spent | (n > 0))
-        return self._moved(s, 1)
-
-    def _shift(self, s, a):
-        i = a - self.L.S0
-        c, k = i // 5, i % 5 + 1
-        me = s.player
-        cost = jnp.where(dominance(s.stores)[c] == me, 0, self.cfg.shift_cost)
-        s = s._replace(stores=s.stores.at[c, me].add(-cost), shells=s.shells.at[c].set(rot(s.shells[c], k)),
-                       spent=s.spent | (cost > 0))
-        return self._moved(s, 2)
-
-    def _modify(self, s, a):
-        i = a - self.L.M0
-        c, node = i // 6, i % 6
-        cost = self.cfg.modify_cost
-        s = s._replace(stores=s.stores.at[c, s.player].add(-cost), shells=s.shells.at[c].set(s.shells[c] ^ (1 << node)),
-                       spent=s.spent | (cost > 0))
-        return self._moved(s, 2)
-
-    def _beacon(self, s, a):
-        v = a - self.L.B0
-        _, vc, _ = self.view(s.mask)
-        cells = vc[v]
-        cost = jnp.where(s.beacons[v] < 0, self.cfg.beacon_build_cost, self.cfg.beacon_capture_cost)
-        stores = s.stores.at[jnp.maximum(cells, 0), s.player].add(jnp.where(cells >= 0, -cost, 0))
-        s = s._replace(stores=stores, beacons=s.beacons.at[v].set(s.player), spent=s.spent | (cost > 0))
-        return self._moved(s, 3)
 
     def _end(self, s, a):
         cfg = self.cfg

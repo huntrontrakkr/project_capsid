@@ -90,9 +90,22 @@ A player's capabilities are local to each cell. Actions taken at a cell are paid
 
 Most moves are at cost: to perform the move, one must expend units from the board. Passing is free. Moving units between cells is free when the crossing cost has a zero payment (see Calculating Costs). Shell rotation by a dominant player is free (see Move 3). Units handed to another player's coffer (Move 5) count as expended. A turn in which no units are expended by a player is a cost-free turn.
 
-## Two-Move-Type Constraint
+## Move Groups
 
-On each turn a player may use moves of at most two of the five move types. Any number of moves of those two types may be made, at any cells and in any order. Passing and ending the turn are always available.
+The five move types fall into four groups:
+
+| Group | Move types |
+| ----- | ---------- |
+| Units | Transfer (Move 1) and Destroy (Move 2) |
+| Shells | Shell ops (Move 3): shift and modify |
+| Beacons | Beacon (Move 4): build and capture |
+| Payments | Pay into another player's coffer (Move 5) |
+
+A turn has at most two stages. In the first, the player picks a group and makes any number of moves from it, at any cells and in any order. The player may then switch to a second group and make any number of moves from that one. Once the player has switched, they cannot go back to the first group, and they cannot start a third. Passing and ending the turn are always available.
+
+Example: a player may orient their shells, then move units and attack. They may not orient, move, and then orient again. Either order is allowed: a player can move units into a cell, become dominant there, and then rotate its shell for free, but cannot then move units through the crossings the rotation opened.
+
+The grouping is provisional and may change.
 
 # Setup
 
@@ -112,7 +125,7 @@ The game consists of two phases per round: an active phase followed by a harvest
 
 ## Active Phase
 
-During the active phase, players take turns in the current order. In the first round the order is the one decided during the initial bid. On a turn, a player may make as many moves as they like, at any cells and in any order, drawn from at most two of the following five move types (see the two-move-type constraint above), or pass:
+During the active phase, players take turns in the current order. In the first round the order is the one decided during the initial bid. On a turn, a player may make moves from at most two move groups, one group after the other (see Move Groups above), or pass. The move types are:
 
 1. Transfer units between cells
 2. Destroy units
@@ -258,6 +271,7 @@ The original design capped the units any cell store could hold at a limit _L_. S
 | Area | Original | This revision |
 | ---- | -------- | ------------- |
 | Move types | 6 (transfer, destroy, shift, modify, beacon, pay) | 5 (shift and modify merged into shell ops) |
+| Moves per turn | Any two move types, freely mixed | Two of four groups (units, shells, beacons, payments), one after the other with no going back (provisional) |
 | Shell rotation | Costs 1 unit | Free and unlimited for a dominant player, 1 unit otherwise |
 | Store limit L | Required, with overburden rules | Removed from the standard game, kept as an optional variant |
 | Beacon creation | 3 units from each adjacent store | Configurable, baseline 1 to 2 from each adjacent store |

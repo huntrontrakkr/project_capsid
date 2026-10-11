@@ -97,12 +97,32 @@ def test_destroy_example():
     assert s.stores[0] == [3, 1]
 
 
-def test_two_move_type_constraint():
+def kinds(s):
+    return {type(a) for a in legal_actions(s)} - {EndTurn}
+
+
+def test_two_groups_per_turn_in_order():
+    """Shells, then units (move and attack together), and no going back to the shells."""
     s = pair_game(a=(5, 3), b=(0, 2))
-    s = play(s, Transfer(0, 0, 1), Destroy(0, 1, 1))
-    acts = legal_actions(s)
-    assert any(isinstance(a, Transfer) for a in acts) and any(isinstance(a, Destroy) for a in acts)
-    assert not any(isinstance(a, (Shift, Modify, Pay, Beacon)) for a in acts)
+    s = play(s, Shift(0, 1))                       # group 1: shells
+    assert kinds(s) == {Shift, Modify, Transfer, Destroy, Pay}   # (no beacon: player 1 holds B)
+    s = play(s, Transfer(0, 0, 1), Destroy(0, 1, 1), Transfer(0, 0, 1))   # group 2: units, in any mix
+    assert kinds(s) == {Transfer, Destroy}         # shells are closed now, and no third group
+
+
+def test_units_then_shells_is_allowed():
+    """Move in, become dominant, then rotate for free; but then no more moving."""
+    s = pair_game(a=(5, 0), b=(0, 2))
+    s = play(s, Transfer(0, 0, 3), Shift(1, 2))
+    assert not s.spent
+    assert kinds(s) == {Shift, Modify}
+
+
+def test_unordered_groups_option_restores_the_old_rule():
+    cfg = Config(move_groups=(0, 1, 2, 3, 4), ordered_groups=False)
+    s = pair_game(a=(5, 3), b=(0, 2), cfg=cfg)
+    s = play(s, Transfer(0, 0, 1), Destroy(0, 1, 1), Transfer(0, 0, 1))
+    assert kinds(s) == {Transfer, Destroy}
 
 
 def test_dominance_is_checked_live():

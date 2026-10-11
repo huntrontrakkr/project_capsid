@@ -65,11 +65,11 @@ One deterministic engine serves the bots, the training loop, and later the game 
 | Beacon positions | `[MAX_VERTICES, 3]` int | the 2 or 3 cells touching each shared vertex |
 | Beacon owner | `[MAX_VERTICES]` int | -1 for empty |
 | Coffers, tally | `[MAX_PLAYERS]` int | |
-| Turn state | scalars | round, phase, current player, move types used this turn, consecutive cost-free count |
+| Turn state | scalars | round, phase, current player, move groups used this turn (in order), consecutive cost-free count |
 
 **Crossing costs.** The cost `p:m` across a shared edge depends only on the two shells and the edge direction, so it is precomputed once as a lookup table of 64 x 64 x 6 entries using the Hamming/GCD rule in `game_rules.md`.
 
-**Action encoding.** A turn becomes a sequence of micro-actions followed by `end_turn` (or `pass`), and the legal-move mask enforces the two-move-type constraint, costs, and dominance:
+**Action encoding.** A turn becomes a sequence of micro-actions followed by `end_turn` (or `pass`), and the legal-move mask enforces the move-group rule, costs, and dominance:
 
 - `transfer(cell, direction, amount_bucket)`
 - `destroy(cell, target_player)`

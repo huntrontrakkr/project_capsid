@@ -28,6 +28,9 @@ class Config:
     beacon_build_cost: int = 2         # per adjacent store (open question 2)
     beacon_capture_cost: int = 1       # per adjacent store
     multi_transfer: bool = True        # units may cross more than once per turn (open question 1)
+    move_groups: tuple = (0, 0, 1, 2, 3)   # group of each move type: transfer, destroy, shell ops, beacon, pay
+    groups_per_turn: int = 2
+    ordered_groups: bool = True        # finish one group before starting the next, with no going back
     early_end: bool = False            # end when one active player remains (open question 5)
     max_actions_per_turn: int = 64     # safety cap: after this only EndTurn is legal
     max_turns_per_round: int = 200     # safety cap: the round goes to harvest and is flagged
@@ -91,7 +94,7 @@ class State:
     phase: str = "active"   # "active", "place", or "over"
     order: list = field(default_factory=list)       # turn order this round
     seat: int = 0                                   # index into order of the player to move
-    types_used: set = field(default_factory=set)    # move types used this turn
+    groups_used: list = field(default_factory=list)  # move groups used this turn, in order
     spent: bool = False                             # units expended this turn
     moves_this_turn: int = 0
     arrived: list = field(default_factory=list)     # [cell] units moved in this turn (for multi_transfer off)
@@ -107,7 +110,7 @@ class State:
         s.stores = [row[:] for row in self.stores]
         for name in ("shells", "beacons", "coffers", "tally", "active", "order", "arrived", "place_queue"):
             setattr(s, name, getattr(self, name)[:])
-        s.types_used = set(self.types_used)
+        s.groups_used = list(self.groups_used)
         return s
 
     @property
@@ -149,7 +152,15 @@ def crossing(state, cell, edge):
 
 
 def type_allowed(state, t):
-    return t in state.types_used or len(state.types_used) < 2
+    """A turn uses at most `groups_per_turn` move groups. With ordered groups, the player finishes
+    one group before starting the next and cannot go back to an earlier one."""
+    cfg, used = state.config, state.groups_used
+    g = cfg.move_groups[t]
+    if not used:
+        return True
+    if cfg.ordered_groups:
+        return g == used[-1] or (g not in used and len(used) < cfg.groups_per_turn)
+    return g in used or len(used) < cfg.groups_per_turn
 
 
 def is_legal(state, a):
@@ -252,7 +263,9 @@ def apply(state, a):
         s.stores[a.cell][i] -= a.n
         s.coffers[a.target] += a.n
         s.spent = True
-    s.types_used.add(MOVE_TYPE[type(a)])
+    g = cfg.move_groups[MOVE_TYPE[type(a)]]
+    if g not in s.groups_used:
+        s.groups_used.append(g)
     s.moves_this_turn += 1
     return s
 
@@ -262,7 +275,7 @@ def _n_active(s):
 
 
 def _start_turn(s):
-    s.types_used, s.spent, s.moves_this_turn = set(), False, 0
+    s.groups_used, s.spent, s.moves_this_turn = [], False, 0
     s.arrived = [0] * s.board.n_cells
 
 

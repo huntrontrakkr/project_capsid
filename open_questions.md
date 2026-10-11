@@ -63,6 +63,7 @@ The first training runs skip the secret bid (see `development_plan.md`, Phase 0 
 ## Decided on 2026-10-10
 
 - Transfer cost is a rate: moving _n_ units costs ceil(_n_ / _m_) × _p_.
+- A turn uses at most two move groups, one after the other with no going back. The groups are units (transfer and destroy), shells (shift and modify), beacons, and payments. The grouping is provisional and may change; the engine has it as a setting.
 - Shell nodes point at the cell's corners (the beacon positions), and pair across a shared edge by reflection: node _d+k_ of A with node _d+2−k_ of B.
 - Any player with units in a cell may modify its shell for 1 unit, with no dominance or beacon requirement. (Was open question 1.)
 - Where shell units come from does not affect play: the unit paid is discarded and a neutral unit from an unlimited supply fills the node.

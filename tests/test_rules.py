@@ -296,3 +296,26 @@ def test_moves_of_different_kinds_never_compare_equal():
     assert not any(isinstance(a, Shift) and a.cell == 0 for a in legal_actions(s))
     with pytest.raises(ValueError):
         apply(s, Shift(0, 1))
+
+
+def test_thirteen_units_at_one_per_five():
+    """Pay 1 for every 5 units moved, paid up front: moving 13 costs 3, so 16 leave the store."""
+    assert transfer_payment(1, 5, 13) == 3
+    a, b = 0b000000, 0b000001       # one pair differs across A's top edge: cost 1:5
+    assert COST[a][b][0] == (1, 5)
+    s = pair_game(a, b, a=(16, 0))
+    s = play(s, Transfer(0, 0, 13))
+    assert s.stores == [[0, 0], [13, 0]]
+    s = pair_game(a, b, a=(15, 0))                  # with 15, moving 13 is not affordable
+    assert max(x.n for x in legal_actions(s) if isinstance(x, Transfer) and x.cell == 0) == 12
+
+
+def test_harvest_adjacency_on_a_line_of_three_cells():
+    """Dominant: +1, and +1 for each adjacent cell the player occupies."""
+    cells = [(0, 1), (0, 0), (0, -1)]               # a vertical line: bottom, middle, top
+    s = new_game(build(cells, [0, 0, 0], [cells[0], cells[2]]), Config())
+    s.stores = [[2, 0], [3, 1], [1, 2]]
+    s = play(s, EndTurn(), EndTurn())
+    # bottom: player 0 dominant, occupies the middle: +2. middle: player 0, occupies bottom and top: +3.
+    # top: player 1 dominant, occupies the middle: +2.
+    assert s.stores == [[4, 0], [6, 1], [1, 4]]

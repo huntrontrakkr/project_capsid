@@ -50,6 +50,12 @@ class Layout:
                 self.corner_vertex[i, k] = keys[key]
         self.vcells = np.array(vcells, np.int32)
         self.v = len(vcells)
+        # which corner of each of those cells the vertex is, so the network can tell corners apart
+        self.vcorner = np.zeros((self.v, 3), np.int32)
+        for v, cells in enumerate(self.vcells):
+            for j, c in enumerate(cells):
+                if c >= 0:
+                    self.vcorner[v, j] = list(self.corner_vertex[c]).index(v)
         self.T0, self.D0 = 0, 18 * n
         self.S0 = self.D0 + 2 * n
         self.M0 = self.S0 + 5 * n
@@ -117,7 +123,7 @@ def rot(s, k):
 
 class Engine:
     def __init__(self, layout, cfg=Config(allow_pay=False), max_steps=2000):
-        assert cfg.players == 2 and not cfg.allow_pay and not cfg.early_end and cfg.groups_per_turn == 2
+        assert cfg.players == 2 and not cfg.allow_pay and cfg.groups_per_turn == 2
         self.L, self.cfg, self.max_steps = layout, cfg, max_steps
         self.nbr0 = jnp.asarray(layout.nbr)
         self.vcells0 = jnp.asarray(layout.vcells)
@@ -278,7 +284,7 @@ class Engine:
         stores = s.stores + income.astype(jnp.int32)
         active = s.active & (stores > 0).any(0)
         rnd = s.round + 1
-        done = (rnd >= cfg.rounds) | (active.sum() == 0)
+        done = (rnd >= cfg.rounds) | (active.sum() == 0) | (cfg.early_end & (active.sum() <= 1))
         return s._replace(stores=stores, tally=tally, active=active, round=rnd, done=done,
                           player=jnp.where(active[0], 0, 1).astype(jnp.int32), streak=jnp.int32(0), turns=jnp.int32(0))
 

@@ -16,14 +16,14 @@ CFG = R.Config(allow_pay=False, max_actions_per_turn=10, max_turns_per_round=12)
 class Pair:
     """A game in both engines, with the index maps between them."""
 
-    def __init__(self, seed, radius=3):
+    def __init__(self, seed, radius=3, cfg=CFG):
         self.layout = L = Layout(radius)
         self.board = generate(seed, GenParams(radius=radius))
-        self.eng = Engine(L, CFG)
+        self.eng = Engine(L, cfg)
         self.legal = jax.jit(self.eng.legal)
         self.step = jax.jit(self.eng.step)
         self.js = self.eng.init(*L.board_arrays(self.board))
-        self.rs = R.new_game(self.board, CFG)
+        self.rs = R.new_game(self.board, cfg)
         self.slot = [L.index[c] for c in self.board.coords]               # ref cell -> slot
         self.cell = {s: i for i, s in enumerate(self.slot)}                 # slot -> ref cell
         self.vertex = {}                                                    # layout vertex -> ref vertex
@@ -91,9 +91,9 @@ class Pair:
             assert int(s.round) == r.round and int(s.player) == r.player
 
 
-@pytest.mark.parametrize("seed", range(3))
-def test_jax_engine_matches_reference(seed):
-    g = Pair(seed)
+@pytest.mark.parametrize("seed,early_end", [(0, False), (1, False), (2, False), (3, True), (4, True)])
+def test_jax_engine_matches_reference(seed, early_end):
+    g = Pair(seed, cfg=R.Config(allow_pay=False, max_actions_per_turn=10, max_turns_per_round=12, early_end=early_end))
     rng = random.Random(seed)
     steps = 0
     while not bool(g.js.done):

@@ -159,8 +159,8 @@ Worked out on 2026-10-10 while exploring the video game UI.
 # Milestones
 
 - [x] Phase 0 decisions recorded in `game_rules.md` (open items are settings; see `open_questions.md`)
-- [ ] Board generator with balanced start areas, gaps, and passages
-- [ ] Engine passes rule tests and property tests
+- [x] Board generator with balanced start areas, gaps, and passages (`capsid/board.py`; `scripts/board_gallery.py` draws samples)
+- [x] Reference engine (`capsid/rules.py`) passes rule tests and property tests (`tests/`)
 - [ ] Batched engine matches the reference engine on replayed games
 - [ ] Random, greedy, and heuristic bots run on boards up to 256 cells
 - [ ] Balance sweep report for beacon cost and the modify gate

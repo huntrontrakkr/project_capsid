@@ -21,7 +21,7 @@ MOVE_TYPE_NAMES = ("transfer", "destroy", "shell ops", "beacon", "pay")
 class Config:
     players: int = 2
     rounds: int = 6
-    start_units: int = 6               # units on each player's start cell (no bid in training v1)
+    start_units: int = 5               # units on each of a player's start cells (no bid in training v1)
     shift_cost: int = 1                # a shift by a player who is not dominant
     modify_cost: int = 1
     beacon_build_cost: int = 2         # per adjacent store (open question 2)
@@ -135,10 +135,11 @@ class State:
 
 def new_game(board, config=Config()):
     P, N = config.players, board.n_cells
-    assert len(board.starts) == P, "the board needs one start per player"
+    assert len(board.starts) == P, "the board needs start cells for every player"
     stores = [[0] * P for _ in range(N)]
-    for p, cell in enumerate(board.starts):
-        stores[cell][p] = config.start_units
+    for p, group in enumerate(board.starts):
+        for cell in group:
+            stores[cell][p] = config.start_units
     return State(board, config, stores, list(board.shells), [-1] * board.n_vertices, [0] * P, [0] * P,
                  [True] * P, order=list(range(P)), arrived=[0] * N)
 

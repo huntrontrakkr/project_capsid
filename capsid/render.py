@@ -42,7 +42,7 @@ def board_svg(board, state=None, size=22.0, title=None, show_disc=None):
     for cx, cy in ghost:
         out.append(f'<polygon points="{hexagon(cx, cy, size * 0.96)}" fill="none" stroke="{MUTED}" '
                    f'stroke-width=".6" stroke-dasharray="2 3"/>')
-    starts = {s: p for p, s in enumerate(board.starts)}
+    starts = {c: p for p, group in enumerate(board.starts) for c in group}
     for i, (cx, cy) in enumerate(centers):
         stroke, sw = ("#6b6a65", 1.0)
         if i in starts:

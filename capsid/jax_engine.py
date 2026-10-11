@@ -75,7 +75,10 @@ class Layout:
         for c, s in zip(board.coords, board.shells):
             mask[self.index[c]] = True
             shells[self.index[c]] = s
-        starts = np.array([self.index[board.coords[s]] for s in board.starts], np.int32)
+        starts = np.full((2, 3), -1, np.int32)          # up to 3 start cells per player, -1 padded
+        for p, group in enumerate(board.starts):
+            for j, c in enumerate(group):
+                starts[p, j] = self.index[board.coords[c]]
         return mask, shells, starts
 
 
@@ -142,7 +145,9 @@ class Engine:
     def init(self, mask, shells, starts):
         n, z = self.L.n, jnp.int32(0)
         stores = jnp.zeros((n, 2), jnp.int32)
-        stores = stores.at[starts[0], 0].set(self.cfg.start_units).at[starts[1], 1].set(self.cfg.start_units)
+        for p in (0, 1):
+            st = jnp.asarray(starts)[p]
+            stores = stores.at[jnp.maximum(st, 0), p].add(jnp.where(st >= 0, self.cfg.start_units, 0))
         return State(jnp.asarray(mask), stores, jnp.asarray(shells, jnp.int32), jnp.full(self.L.v, -1, jnp.int32),
                      jnp.zeros(2, jnp.int32), jnp.ones(2, bool), z, z, jnp.full(2, -1, jnp.int32), jnp.bool_(False),
                      z, z, z, jnp.zeros(n, jnp.int32), z, z, z, z, jnp.bool_(False), jnp.bool_(False))

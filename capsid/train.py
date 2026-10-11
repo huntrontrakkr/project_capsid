@@ -14,9 +14,10 @@ search policy), legal moves per decision, which kinds of moves are played, and r
 """
 import os
 
-os.environ.setdefault("XLA_PYTHON_CLIENT_ALLOCATOR", "cuda_async")      # WSL2 caps single allocations at 4 GiB
 os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
-os.environ.setdefault("XLA_FLAGS", "--xla_gpu_autotune_level=0")
+# CUDA graphs (XLA command buffers) segfault inside libcuda on this WSL2 driver (610.88) when a
+# compiled loop is rerun with different weights; autotuning only slows compiles down.
+os.environ.setdefault("XLA_FLAGS", "--xla_gpu_autotune_level=0 --xla_gpu_enable_command_buffer=")
 
 import argparse
 import dataclasses
@@ -43,7 +44,7 @@ NEG = -1e9
 @dataclasses.dataclass
 class TrainConfig:
     run: str = "run"
-    radius: int = 3
+    radius: int = 4
     boards: int = 2000             # pool of generated boards; each game draws one
     envs: int = 256                # games played in parallel
     sims: int = 16                 # search simulations per decision
@@ -59,7 +60,9 @@ class TrainConfig:
     max_steps: int = 1000          # decisions per game before it is cut off
     max_actions_per_turn: int = 8
     max_turns_per_round: int = 16
-    start_units: int = 6
+    start_units: int = 5           # per start cell
+    start_cells: int = 3
+    rounds: int = 12
     beacon_build_cost: int = 2
     early_end: int = 1             # 1: the game ends when one player is left with units
     eval_every: int = 25
@@ -68,6 +71,7 @@ class TrainConfig:
     iterations: int = 1_000_000
     hours: float = 1.0
     seed: int = 0
+    resume: int = 0                # 1: continue from out/runs/<run>/latest.msgpack if it exists
 
 
 class Buffer(NamedTuple):
@@ -90,12 +94,13 @@ class Trainer:
         self.tc = tc
         self.layout = L = Layout(tc.radius)
         self.cfg = Config(allow_pay=False, max_actions_per_turn=tc.max_actions_per_turn,
-                          max_turns_per_round=tc.max_turns_per_round, start_units=tc.start_units,
+                          max_turns_per_round=tc.max_turns_per_round, start_units=tc.start_units, rounds=tc.rounds,
                           beacon_build_cost=tc.beacon_build_cost, early_end=bool(tc.early_end))
         self.eng = Engine(L, self.cfg, tc.max_steps)
         self.net = Net(tc.hidden, tc.layers)
         self.vcorner = jnp.asarray(L.vcorner)
-        boards = [L.board_arrays(generate(s, GenParams(radius=tc.radius))) for s in range(tc.boards)]
+        gp = GenParams(radius=tc.radius, start_cells=tc.start_cells)
+        boards = [L.board_arrays(generate(s, gp)) for s in range(tc.boards)]
         self.masks = jnp.asarray(np.stack([b[0] for b in boards]))
         self.shells = jnp.asarray(np.stack([b[1] for b in boards]))
         self.starts = jnp.asarray(np.stack([b[2] for b in boards]))
@@ -290,8 +295,17 @@ def main():
     print(f"run {tc.run}: radius {tc.radius} ({tr.layout.n} slots, {tr.layout.n_actions} actions), "
           f"{n_params:,} parameters, {tc.envs} games x {tc.sims} simulations", flush=True)
 
-    t0, prev_params, last_ckpt = time.time(), params, None
-    for it in range(1, tc.iterations + 1):
+    prev_params, start, elapsed0 = params, 1, 0.0
+    latest = out / "latest.msgpack"
+    if tc.resume and latest.exists():
+        template = {"params": params, "opt_state": opt_state, "prev_params": params, "key": key,
+                    "iter": np.int64(0), "elapsed": np.float64(0)}
+        ck = flax.serialization.from_bytes(template, latest.read_bytes())
+        params, opt_state, prev_params, key = ck["params"], ck["opt_state"], ck["prev_params"], ck["key"]
+        start, elapsed0 = int(ck["iter"]) + 1, float(ck["elapsed"])
+        print(f"resumed at iteration {start} after {elapsed0 / 3600:.2f} h (replay buffer starts empty)", flush=True)
+    t0 = time.time() - elapsed0
+    for it in range(start, tc.iterations + 1):
         key, k_sp, k_tr, k_ev = jax.random.split(key, 4)
         ts = time.time()
         states, buf, stats = tr.selfplay(params, states, buf, k_sp)
@@ -307,8 +321,12 @@ def main():
             rec["vs_random"] = {k: float(v) for k, v in tr.match(params, params, k_ev, vs_random=True).items()}
             rec["vs_prev"] = {k: float(v) for k, v in tr.match(params, prev_params, k_ev, vs_random=False).items()}
             prev_params = params
-            last_ckpt = out / f"params_{it:06d}.msgpack"
-            last_ckpt.write_bytes(flax.serialization.to_bytes(params))
+            (out / f"params_{it:06d}.msgpack").write_bytes(flax.serialization.to_bytes(params))
+            ck = {"params": params, "opt_state": opt_state, "prev_params": prev_params, "key": key,
+                  "iter": np.int64(it), "elapsed": np.float64(time.time() - t0)}
+            tmp = out / "latest.tmp"
+            tmp.write_bytes(flax.serialization.to_bytes(ck))
+            tmp.replace(latest)
         log.write(json.dumps(rec) + "\n")
         log.flush()
         if it == 1 or it % 5 == 0 or "vs_random" in rec:
@@ -323,6 +341,7 @@ def main():
         if time.time() - t0 > tc.hours * 3600:
             break
     (out / "params_final.msgpack").write_bytes(flax.serialization.to_bytes(params))
+    (out / "DONE").write_text(f"{it}\n")
     print("done", flush=True)
 
 

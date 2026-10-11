@@ -23,7 +23,7 @@ class Board:
     vertices: tuple        # [vertex] -> cells around that beacon position (2 or 3)
     corner_vertex: tuple   # [cell][corner] -> vertex at that corner, -1 if not a beacon position
     shells: tuple          # starting shell per cell
-    starts: tuple          # start cell per player
+    starts: tuple          # start cells per player: a tuple of cells for each
     name: str = ""
     info: dict = field(default_factory=dict, compare=False)
 
@@ -37,8 +37,10 @@ class Board:
 
 
 def build(coords, shells, starts, name="", info=None):
-    """Board from cell coordinates, a shell per cell, and a start coordinate per player."""
+    """Board from cell coordinates, a shell per cell, and per player either one start coordinate or
+    a list of start coordinates."""
     coords = list(coords)
+    starts = [[s] if isinstance(s[0], int) else list(s) for s in starts]
     index = {c: i for i, c in enumerate(coords)}
     nbr = tuple(tuple(index.get(hg.neighbor(c, k), -1) for k in range(6)) for c in coords)
     keys, vertices, corner_vertex = {}, [], []
@@ -56,7 +58,7 @@ def build(coords, shells, starts, name="", info=None):
             row.append(keys[key])
         corner_vertex.append(tuple(row))
     board = Board(tuple(coords), nbr, tuple(vertices), tuple(corner_vertex), tuple(shells),
-                  tuple(index[s] for s in starts), name, info or {})
+                  tuple(tuple(index[c] for c in group) for group in starts), name, info or {})
     validate(board)
     return board
 
@@ -86,13 +88,17 @@ def validate(board):
     for i, row in enumerate(board.corner_vertex):
         assert any(v >= 0 for v in row), f"cell {board.coords[i]} touches no beacon position"
     assert all(0 <= s < 64 for s in board.shells)
-    assert len(set(board.starts)) == len(board.starts), "start cells must differ"
+    cells = [c for group in board.starts for c in group]
+    assert len(set(cells)) == len(cells), "start cells must differ"
 
 
 def path_distances(board, src):
+    """Steps from the nearest of the source cells (one cell index or several)."""
+    src = [src] if isinstance(src, int) else list(src)
     d = [-1] * board.n_cells
-    d[src] = 0
-    q = deque([src])
+    for s in src:
+        d[s] = 0
+    q = deque(src)
     while q:
         u = q.popleft()
         for v in board.nbr[u]:
@@ -108,7 +114,7 @@ def chokepoints(board):
 
 
 def start_entrances(board, player, radius=1):
-    """Edges leading out of a start area (the cells within `radius` steps of the start)."""
+    """Edges leading out of a start area (the cells within `radius` steps of the start cells)."""
     d = path_distances(board, board.starts[player])
     area = {i for i in range(board.n_cells) if 0 <= d[i] <= radius}
     return sum(1 for u in area for v in board.nbr[u] if v >= 0 and v not in area)
@@ -148,6 +154,7 @@ class GenParams:
     walls: int = 2              # long thin gaps, which make narrow passages around their ends
     ragged: float = 0.9         # how strongly the outline is eaten away (0 keeps the disc's outline)
     start_depth: int = 1        # starts sit this many cells in from the edge of the disc
+    start_cells: int = 3        # 1, or 3 mutually adjacent cells meeting at one corner
     keep_radius: int = 1        # cells this close to a start are never removed
     sym_radius: int = 2         # within this distance of a start, everything is mirrored
     falloff: float = 1.5        # beyond it, the chance of mirroring decays over this many cells
@@ -189,7 +196,15 @@ def _try_generate(p, rng):
     ring = [c for c in disc if hg.distance(c, (0, 0)) == p.radius - p.start_depth]
     s0 = rng.choice(ring)
     s1 = hg.mirror(s0)
-    near = {c: min(hg.distance(c, s0), hg.distance(c, s1)) for c in disc}
+    group0 = [s0]
+    if p.start_cells == 3:      # the start cell and the two neighbors that meet it at one corner
+        disc_set = set(disc)
+        corners = [k for k in range(6) if hg.neighbor(s0, k) in disc_set and hg.neighbor(s0, k + 1) in disc_set]
+        k = rng.choice(corners)
+        group0 = [s0, hg.neighbor(s0, k), hg.neighbor(s0, k + 1)]
+    group1 = [hg.mirror(c) for c in group0]
+    home = group0 + group1
+    near = {c: min(hg.distance(c, h) for h in home) for c in disc}
     w = {c: mirror_weight(near[c], p) for c in disc}
 
     f = _gap_field(disc, p, rng)
@@ -229,9 +244,10 @@ def _try_generate(p, rng):
         if m in seen:
             shells[m] = rot(shells[c], 3) if mirrored else rng.randrange(64)
 
-    board = build(cells, [shells[c] for c in cells], [s0, s1])
-    straight = hg.distance(s0, s1)
-    d = path_distances(board, board.starts[0])[board.starts[1]]
+    board = build(cells, [shells[c] for c in cells], [group0, group1])
+    straight = min(hg.distance(a, b) for a in group0 for b in group1)
+    d0 = path_distances(board, board.starts[0])
+    d = min(d0[c] for c in board.starts[1])
     bal = balance(board)
     if d > p.detour * straight or abs(bal) > p.balance_tol:
         return None

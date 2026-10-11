@@ -271,7 +271,8 @@ def test_start_areas_are_mirror_images():
     for seed in range(20):
         b = generate(seed, p)
         cells = dict(zip(b.coords, b.shells))
-        s0, s1 = b.coords[b.starts[0]], b.coords[b.starts[1]]
+        assert [hg.mirror(b.coords[c]) for c in b.starts[0]] == [b.coords[c] for c in b.starts[1]]
+        s0, s1 = b.coords[b.starts[0][0]], b.coords[b.starts[1][0]]
         assert s1 == hg.mirror(s0)
         for c, sh in cells.items():
             if min(hg.distance(c, s0), hg.distance(c, s1)) <= p.sym_radius:

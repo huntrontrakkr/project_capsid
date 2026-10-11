@@ -10,7 +10,6 @@ its own; then each player with units in their coffer places them with Place move
 """
 import copy
 from dataclasses import dataclass, field
-from typing import NamedTuple
 
 from .shell import COST, rot, transfer_payment
 
@@ -28,6 +27,7 @@ class Config:
     beacon_build_cost: int = 2         # per adjacent store (open question 2)
     beacon_capture_cost: int = 1       # per adjacent store
     multi_transfer: bool = True        # units may cross more than once per turn (open question 1)
+    allow_pay: bool = True             # coffer payments; off for training v1 (2 players, no placement step)
     move_groups: tuple = (0, 0, 1, 2, 3)   # group of each move type: transfer, destroy, shell ops, beacon, pay
     groups_per_turn: int = 2
     ordered_groups: bool = True        # finish one group before starting the next, with no going back
@@ -36,44 +36,54 @@ class Config:
     max_turns_per_round: int = 200     # safety cap: the round goes to harvest and is flagged
 
 
-class Transfer(NamedTuple):
+# Actions are frozen dataclasses, not tuples, so moves of different kinds never compare equal
+# (as tuples, Shift(3, 1) would equal Modify(3, 1)).
+@dataclass(frozen=True)
+class Transfer:
     cell: int
     edge: int
     n: int
 
 
-class Destroy(NamedTuple):
+@dataclass(frozen=True)
+class Destroy:
     cell: int
     target: int
     n: int
 
 
-class Shift(NamedTuple):
+@dataclass(frozen=True)
+class Shift:
     cell: int
     k: int          # 1 to 5 steps clockwise
 
 
-class Modify(NamedTuple):
+@dataclass(frozen=True)
+class Modify:
     cell: int
     node: int       # removes the unit there, or adds a neutral unit if the node is vacant
 
 
-class Beacon(NamedTuple):
+@dataclass(frozen=True)
+class Beacon:
     vertex: int     # build if empty, capture if another player owns it
 
 
-class Pay(NamedTuple):
+@dataclass(frozen=True)
+class Pay:
     cell: int
     target: int
     n: int
 
 
-class Place(NamedTuple):
+@dataclass(frozen=True)
+class Place:
     cell: int
     n: int
 
 
-class EndTurn(NamedTuple):
+@dataclass(frozen=True)
+class EndTurn:
     pass
 
 
@@ -201,7 +211,7 @@ def legal_actions(state):
                 acts += [Shift(c, k) for k in range(1, 6)]
             if mine >= max(1, cfg.modify_cost):
                 acts += [Modify(c, k) for k in range(6)]
-        if type_allowed(state, PAY) and mine > 0:
+        if cfg.allow_pay and type_allowed(state, PAY) and mine > 0:
             for j in range(P):
                 if j != i and state.active[j]:
                     acts += [Pay(c, j, n) for n in range(1, mine + 1)]

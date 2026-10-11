@@ -288,3 +288,11 @@ def test_fully_mirrored_boards():
 
 def test_hex_board_sizes():
     assert [hex_board(r).n_cells for r in (2, 3, 4)] == [19, 37, 61]
+
+
+def test_moves_of_different_kinds_never_compare_equal():
+    assert Shift(3, 1) != Modify(3, 1)
+    s = pair_game(a=(1, 4), cfg=Config(shift_cost=2))   # player 0 can afford to modify cell 0 but not to shift it
+    assert not any(isinstance(a, Shift) and a.cell == 0 for a in legal_actions(s))
+    with pytest.raises(ValueError):
+        apply(s, Shift(0, 1))

@@ -3,7 +3,13 @@ name = "capsid"
 version = "0.1.0"
 description = "Rules engine, board generator, and self-play experiments for project_capsid"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "numpy",
+    "jax[cuda12]>=0.4.30",
+    "flax>=0.8",
+    "optax>=0.2",
+    "mctx>=0.0.5",
+]
 
 [dependency-groups]
 dev = ["pytest>=8"]

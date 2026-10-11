@@ -3,14 +3,35 @@ Development Plan: Rules Engine and Self-Play
 
 This plan covers the work between the current rule set (`game_rules.md`, `open_questions.md`) and anything physical or visual. The goal is to use self-play agents to stress the rules, find balanced defaults, and discover whether distinct classes of strategy emerge, before committing to a board, a map builder, or a client.
 
+The agents are playtesters, not the product. A rule set is only worth keeping if it makes a game that is interesting for people: real choices on every turn, enough depth that skill keeps paying off, several ways to win, and a game that fits in about an hour. Every experiment reports against the design scorecard below, and the output of the whole plan is a shortlist of rule sets for human playtests.
+
+The first pass is 2-player. Three to six players come after the 2-player game is settled.
+
 Target scope for the experiments:
 
 | Parameter | Range |
 | --------- | ----- |
-| Players | 2 to 6 |
+| Players | 2 first, then 3 to 6 |
 | Rounds | 6, with beacons and every rule in `game_rules.md` |
+| Human game length | about 60 minutes for 6 rounds, so about 10 minutes per round |
 | Board size | up to 256 cells, from templates or the map generator |
-| Boards | random amorphous boards plus hand-picked templates |
+| Boards | generated boards with balanced start areas (see Board generator), plus hand-picked templates |
+
+# Design scorecard
+
+Every rule variant is trained with the same budget and scored on the same card. Variants that score badly are dropped early, and more compute goes to the promising ones.
+
+| Question | Measure |
+| -------- | ------- |
+| Are the choices real? | Effective number of good options per decision: the exponential of the entropy of a strong agent's search policy. Near 1 means every move is obvious; very large means good and bad moves are hard to tell apart. Reported per micro-action and per whole turn, since a person plans a whole turn. |
+| Do the choices matter? | Win probability lost by taking the second- or third-best option instead of the best. |
+| Depth | Length of the skill ladder: agents trained in sequence, each beating the last about 75% of the time, counted until improvement stalls. Also whether more search per decision keeps raising the win rate. |
+| Is a simple strategy enough? | Win rate of the random and greedy bots against the strongest agent. |
+| Does every rule earn its place? | Restricted play: the win rate an agent loses when it may not use one mechanic (destroy, pay, shell ops, beacons). Near zero means a dead rule; near total means a dominant one. |
+| Is it tense? | Lead changes in tally and predicted outcome, how often the player behind at round 3 wins, and the round by which the outcome becomes predictable. |
+| Is it fair? | Win rate by seat and draw rate. Every generated board is played twice with the seats swapped, so board asymmetry cancels out of the seat measure. |
+| Can a person play it? | Micro-actions per turn, turns per round, and estimated minutes per round. The estimate converts action counts with an assumed time per action, calibrated against the first human playtest. Target: about 10 minutes per round. |
+| Are there several ways to win? | Distinct playing styles among the strong agents (Phase 4). Several competitive styles is the goal; one style that beats all others is a warning. |
 
 # Phase 0: Lock the rules
 
@@ -59,7 +80,15 @@ One deterministic engine serves the bots, the training loop, and later the game 
 
 Amount buckets (for example 1, half, all) keep the action space near a few thousand entries at 256 cells.
 
-**Board generator.** Hex boards by radius (radius 8 has 217 cells, radius 9 has 271), amorphous random boards capped at 256 cells, and a template format for hand-built maps. Every generated board is checked against the rules: one contiguous group, every cell touching at least one beacon position.
+**Board generator.** Plain hex boards by radius, generated boards, and a template format for hand-built maps. Generated boards follow these rules:
+
+- **Not a plain hexagon.** The field can have gaps, holes, narrow passages, and walls, but it is always one connected group of cells.
+- **Balanced start areas.** For 2 players, the two start areas are mirror images of each other (point symmetry through the board's center, with each mirrored shell turned 180 degrees so it plays the same). Cells, gaps, and shells near the starts are mirrored exactly.
+- **Randomness grows with distance from the starts.** The chance that a cell, gap, or shell is mirrored falls off with its distance from the nearer start, so the middle of the field is the most varied.
+- **Fairness checks.** A board is rejected if the two starts are too close or too far apart by path, or if one player is much closer to more of the board than the other. Settings control how sheltered a start area is (how many ways in), the share of gaps, and the number of narrow passages.
+- **Shells.** Start-area shells are mirrored; the rest are drawn at random. Templates can set every shell by hand.
+
+Every board is checked against the rules: one contiguous group, every cell touching at least one beacon position.
 
 **Tests.** Unit tests for every worked example in `game_rules.md`, property tests (unit conservation through every move, tally only changes in harvest, crossing cost symmetry), and replay tests comparing the batched engine against a slow reference implementation.
 
@@ -73,7 +102,7 @@ This phase runs on CPU and needs no GPU.
 2. The greedy agent from the April 2026 simulations, ported to the new engine.
 3. A heuristic agent that uses the shell state graph (see the design note below) to route each shell toward the crossing costs it wants.
 
-**Metrics logged per game.** Shell engagement (share of moves that are shift or modify), beacons built and captured, game length in turns and micro-actions, win rate by seat, units per cell over time, coffer payments, and how often the turn cap triggers.
+**Metrics logged per game.** Shell engagement (share of moves that are shift or modify), beacons built and captured, game length in turns and micro-actions, win rate by seat, units per cell over time, coffer payments, and how often the turn cap triggers. Every decision also logs its legal-move count, the agent's policy, the value of each option, and the predicted outcome, which feed the design scorecard.
 
 **Sweeps.** Beacon build cost (1, 2, 3), the modify gate on and off, board size, and player count. These settle items 2 and 3 from Phase 0 before any network training starts.
 
@@ -129,7 +158,8 @@ Worked out on 2026-10-10 while exploring the video game UI.
 
 # Milestones
 
-- [ ] Phase 0 decisions recorded in `game_rules.md`
+- [x] Phase 0 decisions recorded in `game_rules.md` (open items are settings; see `open_questions.md`)
+- [ ] Board generator with balanced start areas, gaps, and passages
 - [ ] Engine passes rule tests and property tests
 - [ ] Batched engine matches the reference engine on replayed games
 - [ ] Random, greedy, and heuristic bots run on boards up to 256 cells
@@ -138,3 +168,4 @@ Worked out on 2026-10-10 while exploring the video game UI.
 - [ ] Curriculum reaches 61 cells with 3 to 4 players
 - [ ] Evaluation at 256 cells with 6 players
 - [ ] Strategy class clustering report
+- [ ] Design scorecard for each surviving rule variant, and a shortlist for human playtests
